@@ -74,7 +74,7 @@ class SimulatorServer:
         self.config = copy.deepcopy(config) if config is not None else self._load_config(config_path)
         server_config = self.config.get('server', {})
         kinematics_config = self.config.get('kinematics', {})
-        self.zmq_port = int(server_config.get('zmq_port', 5555) if zmq_port is None else zmq_port)
+        self.zmq_port = int(server_config.get('zmq_port', 5655) if zmq_port is None else zmq_port)
         self.sim_dt = float(kinematics_config.get('dt', 0.01) if sim_dt is None else sim_dt)
         self.realtime = bool(server_config.get('realtime', True) if realtime is None else realtime)
         self.command_timeout_s = float(server_config.get('command_timeout_s', 0.5)

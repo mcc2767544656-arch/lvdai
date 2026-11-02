@@ -23,4 +23,4 @@ node_params:
     trajectory_file: ""            # 留空自动选最新
   sim_output:
     simulator_host: localhost
-    simulator_port: 5555
+    simulator_port: 5655

@@ -268,8 +268,8 @@ def create_parser() -> argparse.ArgumentParser:
     sim_refresh_parser.add_argument(
         '--port',
         type=int,
-        default=5555,
-        help='仿真器端口（默认 5555）'
+        default=5655,
+        help='仿真器端口（默认 5655）'
     )
     _add_json_argument(sim_refresh_parser)
     monitor_parser = subparsers.add_parser(

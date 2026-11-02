@@ -8,7 +8,7 @@
 #   - 航向角使用数学坐标系 (东=0, CCW正, 弧度)
 #
 # 数据流：
-#   仿真器 (localhost:5555)
+#   仿真器 (localhost:5655)
 #     ↓ [地块 WGS84]
 #   [sim_output] ──→ [global_coverage] ──→ [规划路径 ENU]
 #     ↓ [RTK WGS84]          ↓
@@ -42,7 +42,7 @@ nodes:
     description: "从仿真器读取传感器数据和地块信息"
     params:
       simulator_host: localhost
-      simulator_port: 5555
+      simulator_port: 5655
       timeout: 2000
 
       # 传感器开关
@@ -198,7 +198,7 @@ nodes:
     description: "将控制命令发送到仿真器"
     params:
       simulator_host: localhost
-      simulator_port: 5555
+      simulator_port: 5655
       timeout: 2000
 
       # 默认控制值（无输入时停止）

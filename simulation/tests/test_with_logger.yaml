@@ -7,7 +7,7 @@ nodes:
     node: sim_rtk
     params:
       simulator_host: localhost
-      simulator_port: 5555
+      simulator_port: 5655
       frequency: 20
 
   # 2. 纯追踪速度控制器
@@ -28,7 +28,7 @@ nodes:
     node: sim_velocity
     params:
       simulator_host: localhost
-      simulator_port: 5555
+      simulator_port: 5655
       control_frequency: 50
       max_linear_velocity: 2.0
       max_angular_velocity: 1.0

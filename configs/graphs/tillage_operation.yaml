@@ -44,7 +44,7 @@ nodes:
     description: "从仿真器读取传感器数据"
     params:
       simulator_host: localhost
-      simulator_port: 5555
+      simulator_port: 5655
       timeout: 2000
       enable_gps: false
       enable_imu: false
@@ -167,7 +167,7 @@ nodes:
     description: "将速度控制命令发送到仿真器"
     params:
       simulator_host: localhost
-      simulator_port: 5555
+      simulator_port: 5655
       timeout: 2000
       control_mode: velocity
       input_frequency: 50.0

@@ -77,7 +77,7 @@ def _request_simulator(payload: dict[str, Any], timeout_ms: int = 500) -> dict[s
     socket.setsockopt(zmq.RCVTIMEO, timeout_ms)
     socket.setsockopt(zmq.SNDTIMEO, timeout_ms)
     socket.setsockopt(zmq.LINGER, 0)
-    socket.connect("tcp://127.0.0.1:5555")
+    socket.connect("tcp://127.0.0.1:5655")
     try:
         socket.send_json(payload)
         return socket.recv_json()
@@ -219,7 +219,7 @@ def _assert_clean_shutdown(
     if PID_FILE.exists():
         errors.append(f"runtime PID file still exists: {PID_FILE}")
 
-    listening_ports = [port for port in (5555, 8080) if _port_is_listening(port)]
+    listening_ports = [port for port in (5655, 8080) if _port_is_listening(port)]
     if listening_ports:
         errors.append(f"TCP ports still listening: {listening_ports}")
 
@@ -232,7 +232,7 @@ def _assert_clean_shutdown(
         "node_processes_checked": len(node_pids),
         "node_processes_exited": True,
         "simulator_pid_exited": simulator_pid is None or not _pid_is_alive(simulator_pid),
-        "released_ports": [5555, 8080],
+        "released_ports": [5655, 8080],
         "pid_file_removed": not PID_FILE.exists(),
         "no_residual_control_process": not is_runtime_running(),
     }
@@ -249,7 +249,7 @@ def run_preflight(
     if is_runtime_running():
         raise PreflightError("Runtime is already running; stop it before preflight")
     if _request_simulator({"type": "get_state"}, timeout_ms=200):
-        raise PreflightError("Port 5555 already has a responding simulator")
+        raise PreflightError("Port 5655 already has a responding simulator")
 
     expected_node_count = _expected_node_count(config_path)
     simulator: subprocess.Popen[Any] | None = None

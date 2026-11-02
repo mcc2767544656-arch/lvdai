@@ -150,7 +150,7 @@ sensors:
 # 服务器配置
 server:
   # ZMQ端口
-  zmq_port: 5555
+  zmq_port: 5655
 
   # 运动/机具命令分别超时后停车、停PTO并抬起。0显式禁用。
   command_timeout_s: 0.5
