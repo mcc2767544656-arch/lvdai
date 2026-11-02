@@ -14,8 +14,10 @@
 | [仿真闭环与纯 RTK 复现实验](SIMULATION_RTK_EXPERIMENTS.md) | 如何区分 RTK 抖动与真实画龙，比较延迟/车辆响应，并评价机具实际覆盖？ |
 | [轻量三维农场显示](LIGHTWEIGHT_3D_SIMULATION.md) | 如何启动三维观察？仿真真值与实车估计、机具反馈、失联和内存回放如何显示？ |
 | [UM982 双天线与低速纠偏](UM982_HEADING_AND_TRACKING.md) | 主从航向如何进入控制？如何按任务选择跟踪方法，与停车抬升规则配合？ |
+| [L2 激光雷达与 USB 摄像头接入规划（草案）](SENSOR_HARDWARE_INTEGRATION_PLAN.md) | 新传感器如何先用于只读监看，并为后续避障评估预留边界？ |
 | [连续旋耕规划器](CONTINUOUS_TILLAGE_PLANNERS.md) | 如何连续落机具大半径回转？现成螺旋候选的限制和整田验证结果是什么？ |
 | [主体大回转与沿边补作业](HYBRID_BOUNDARY_COVERAGE.md) | 如何组合主体与补边规划，调整覆盖目标并执行抬机具转场？ |
+| [Orange Pi 5 Pro 部署记录](DEPLOYMENT_ORANGE_PI_5PRO.md) | 这台边缘机（TF 卡启动、无 SPI Flash）怎么配的？端口、工具链、现场热点、系统变更和踩过的坑有哪些？ |
 | [测试说明](../tests/README.md) | 当前测试如何收集、运行，CI 覆盖到哪里？ |
 
 ## 仍有效的专题文档
