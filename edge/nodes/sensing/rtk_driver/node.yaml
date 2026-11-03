@@ -65,12 +65,17 @@ params:
   nmea_message:
     type: str
     default: "KSXT"
-    description: "主要NMEA消息类型（KSXT, GPGGA, GPRMC）"
+    description: "主要 NMEA 消息类型。推荐 KSXT：一条含位置/海拔/航向/速度，可 10Hz，且不碰 GGA/RMC"
 
   output_frequency:
     type: int
-    default: 20
-    description: "输出频率（Hz），支持 1/2/5/10/20/50"
+    default: 10
+    description: "输出/航向频率（Hz）。建议 ≤10；20（周期0.05）会触发 UM982 时基加速约1.58倍，GGA/RMC 跟着变快"
+
+  configure_position_rate:
+    type: bool
+    default: false
+    description: "是否修改 GGA/RMC 输出频率；默认 false，保持 1Hz 避免 Air700E 看门狗重启。航向用 GPTHS 单独提速"
 
   # RTK质量控制
   min_rtk_quality:

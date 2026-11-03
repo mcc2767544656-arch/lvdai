@@ -53,7 +53,7 @@ nodes:
     package: sensing/rtk_driver
     description: "从RTK GPS设备读取高精度定位数据"
     params:
-      serial_port: /dev/ttyACM3
+      serial_port: /dev/serial/by-id/usb-AirM2M_AirM2M_Compo_000000000001-if06  # UM982 数据口
       serial_baudrate: 115200
       serial_timeout: 1.0
       use_network: false

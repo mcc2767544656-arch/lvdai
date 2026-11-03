@@ -140,8 +140,42 @@ def test_legacy_device_setting_requests_ths_and_uses_configured_timeout(monkeypa
     assert node.heading_source == 'dual_antenna'
     assert node.heading_timeout_s == 0.25
     assert 'GPTHS 0.05' in commands
-    assert 'GPRMC 0.05' in commands and 'GPGGA 0.05' in commands
+    assert 'GPRMC 0.05' not in commands
+    assert 'GPGGA 0.05' not in commands
     assert not any(command.startswith('UNLOG') for command in commands)
+
+
+def _configure_with(monkeypatch, params):
+    port = SimpleNamespace(send=lambda data: None)
+    sdk = SimpleNamespace(logger=logging.getLogger('test_rtk'),
+                          get_param=lambda key, default=None: params.get(key, default),
+                          create_output_port=lambda name: port)
+    commands = []
+    device = SimpleNamespace(write=lambda command: commands.append(command) or True)
+    monkeypatch.setattr(driver_module, 'NodeFlowSDK', lambda **kwargs: sdk)
+    monkeypatch.setattr(driver_module, 'create_interface', lambda config: device)
+    monkeypatch.setattr(driver_module.time, 'sleep', lambda delay: None)
+    node = RTKDriverNode()
+    node._configure_device()
+    return commands
+
+
+def test_configure_position_rate_is_opt_in(monkeypatch):
+    commands = _configure_with(monkeypatch, {
+        'nmea_message': 'GPRMC', 'output_frequency': 10, 'configure_position_rate': True,
+    })
+    assert 'GPRMC 0.1' in commands
+    assert 'GPGGA 0.1' in commands
+    assert 'GPTHS 0.1' in commands
+
+
+def test_ksxt_requests_ksxt_and_ths_without_touching_position(monkeypatch):
+    commands = _configure_with(monkeypatch, {
+        'nmea_message': 'KSXT', 'output_frequency': 10,
+    })
+    assert 'KSXT 0.1' in commands
+    assert 'GPTHS 0.1' in commands
+    assert not any(c.startswith(('GPRMC', 'GPGGA')) for c in commands)
 
 
 def test_status_log_keeps_heading_in_degrees(caplog):

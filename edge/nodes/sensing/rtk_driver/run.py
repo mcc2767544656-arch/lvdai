@@ -38,6 +38,9 @@ class RTKDriverNode:
         self.network_protocol = self.sdk.get_param("network_protocol", "tcp")
         self.nmea_message = self.sdk.get_param("nmea_message", "KSXT")
         self.output_frequency = self.sdk.get_param("output_frequency", 20)
+        # 默认不改 GGA/RMC 的输出频率：它们是 Air700E 看门狗的生命线。
+        # 需要改定位消息频率时显式打开（风险自负）。
+        self.configure_position_rate = bool(self.sdk.get_param("configure_position_rate", False))
         self.min_rtk_quality = self.sdk.get_param("min_rtk_quality", 3)
         self.min_satellites = self.sdk.get_param("min_satellites", 10)
         self.enable_smoothing = self.sdk.get_param("enable_smoothing", False)
@@ -218,20 +221,34 @@ class RTKDriverNode:
         # 构造配置命令（UM982命令格式：<消息名> <周期秒>，如 GPRMC 0.05 = 20Hz）
         commands = []
 
-        # 注意: 不能发送 UNLOG/UNLOGALL，会停掉 GGA/RMC 触发看门狗重启
-        # 只添加或修改输出频率
-
-        # 配置主要NMEA消息输出
+        # 只允许添加/修改输出频率，禁止 UNLOG/UNLOGALL：
+        # 停掉 GGA/RMC 会触发 Air700E 看门狗重启。
         period = 1.0 / self.output_frequency  # 转换为周期（秒）
-        commands.append(f"{self.nmea_message} {period}")
 
-        # 如果使用GPGGA+GPRMC组合，需要配置两个消息
-        if self.nmea_message in ("GPGGA", "GNGGA"):
-            commands.append(f"GPRMC {period}")
-        elif self.nmea_message in ("GPRMC", "GNRMC"):
-            commands.append(f"GPGGA {period}")
+        # 定位消息（GGA/RMC）默认保持设备出厂 1Hz：
+        # 它们是 Air700E 看门狗的生命线，周期一旦拉长就会重启循环。
+        # 需要改时显式打开 configure_position_rate。
+        if self.configure_position_rate:
+            commands.append(f"{self.nmea_message} {period}")
 
-        # 双天线航向：额外配置 GPTHS 输出
+            # 如果使用GPGGA+GPRMC组合，需要配置两个消息
+            if self.nmea_message in ("GPGGA", "GNGGA"):
+                commands.append(f"GPRMC {period}")
+            elif self.nmea_message in ("GPRMC", "GNRMC"):
+                commands.append(f"GPGGA {period}")
+        else:
+            self.logger.info(
+                "Position messages GGA/RMC left at device default (1Hz, watchdog-safe)"
+            )
+
+        # KSXT：集成语句，不参与看门狗，可独立提速。
+        # 一条包含经纬度、海拔、航向、俯仰/横滚、地速和航迹角。
+        if self.nmea_message.upper() == "KSXT":
+            commands.append(f"KSXT {period}")
+
+        # 双天线航向：只把 GPTHS 提到目标频率
+        # 注意：RMC 的航向是地面航迹角（COG），不是主->从天线基线角，
+        # 航向控制必须用 GPTHS（或 HEADINGA）。
         if self.heading_source == "dual_antenna":
             commands.append(f"GPTHS {period}")
 

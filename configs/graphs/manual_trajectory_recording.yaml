@@ -65,7 +65,7 @@ nodes:
       use_network: false              # false=串口连接, true=网络连接
 
       # ========== 串口连接参数 ==========
-      serial_port: /dev/ttyACM3       # RTK设备串口（Linux/Mac）
+      serial_port: /dev/serial/by-id/usb-AirM2M_AirM2M_Compo_000000000001-if06  # UM982 数据口
                                        # Windows示例: COM3
       serial_baudrate: 115200          # 波特率（常见：9600, 115200, 230400）
       serial_timeout: 1.0              # 读取超时（秒）

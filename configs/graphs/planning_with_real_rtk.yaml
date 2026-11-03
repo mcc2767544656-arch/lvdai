@@ -33,14 +33,15 @@ nodes:
     description: "真实高精度RTK-GPS传感器驱动"
     params:
       # 串口配置
-      serial_port: "/dev/ttyACM3"       # UM982 RTK
+      serial_port: "/dev/serial/by-id/usb-AirM2M_AirM2M_Compo_000000000001-if06"  # UM982 数据口；写 $snp 后会重枚举，别写死 ACMx
       serial_baudrate: 115200
       serial_timeout: 1.0
       use_network: false
 
       # NMEA消息配置
-      nmea_message: "GPRMC"              # 设备输出 GNRMC+GNGGA+GNTHS
-      output_frequency: 20              # 20Hz匹配导航系统
+      nmea_message: "KSXT"               # KSXT 集成语句：位置+海拔+航向+速度，10Hz；GGA/RMC 仍保持 1Hz
+      output_frequency: 10              # 10Hz 航向；别用 20（0.05 会让模块时基加速 1.58x，GGA/RMC 变 632ms）
+      configure_position_rate: false    # 不动 GGA/RMC，保持 1Hz，避免看门狗重启
 
       # RTK质量控制
       min_rtk_quality: 3                # 3=FIXED（最高），4会过滤掉所有数据
