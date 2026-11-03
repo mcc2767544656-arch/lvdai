@@ -101,6 +101,14 @@ def test_legacy_hdt_needs_true_marker_and_finite_value(timed_parser):
         assert parser.parse(GGA)['heading'] is None
 
 
+def test_dual_antenna_parser_can_disable_hdt():
+    parser = NMEAParser(allow_hdt=False)
+    assert parser.parse(sentence('GPHDT,0.0000,T')) is None
+    result = parser.parse(sentence('GNTHS,90,A'))
+    assert result['heading'] == 90.0
+    assert result['heading_source'] == 'THS'
+
+
 def test_reconnect_reset_discards_previous_connection_heading(timed_parser):
     parser, _ = timed_parser
     parser.parse(sentence('GNTHS,90,A'))

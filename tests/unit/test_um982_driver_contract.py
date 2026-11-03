@@ -185,3 +185,16 @@ def test_status_log_keeps_heading_in_degrees(caplog):
     with caplog.at_level(logging.INFO):
         node._log_status({'lat': 31.2, 'lon': 121.5, 'heading': 90.0})
     assert 'Heading: 90.0°' in caplog.text
+
+
+def test_driver_disables_hdt_for_dual_antenna(monkeypatch):
+    params = {'nmea_message': 'KSXT', 'output_frequency': 10}
+    port = SimpleNamespace(send=lambda data: None)
+    sdk = SimpleNamespace(logger=logging.getLogger('test_rtk'),
+                          get_param=lambda key, default=None: params.get(key, default),
+                          create_output_port=lambda name: port)
+    device = SimpleNamespace(write=lambda command: True)
+    monkeypatch.setattr(driver_module, 'NodeFlowSDK', lambda **kwargs: sdk)
+    monkeypatch.setattr(driver_module, 'create_interface', lambda config: device)
+    node = RTKDriverNode()
+    assert node.parser.allow_hdt is False

@@ -13,10 +13,13 @@ class NMEAParser:
     """NMEA 0183 消息解析器"""
 
     def __init__(self, heading_timeout_s: float = 0.5,
-                 clock: Optional[Callable[[], float]] = None):
+                 clock: Optional[Callable[[], float]] = None,
+                 allow_hdt: bool = True):
         if not math.isfinite(heading_timeout_s) or heading_timeout_s <= 0:
             raise ValueError('heading_timeout_s must be finite and positive')
         self.heading_timeout_s = heading_timeout_s
+        # 双天线设备应关闭 HDT：它没有解状态，失锁时会输出 0.0000 并被当成有效航向。
+        self.allow_hdt = allow_hdt
         self._clock = clock if clock is not None else time.monotonic
         self.last_position = None  # (lat, lon, alt)
         self.last_timestamp = None
@@ -336,6 +339,8 @@ class NMEAParser:
         elif sentence.startswith('$GPTHS') or sentence.startswith('$GNTHS'):
             return self.parse_gpths(sentence)
         elif sentence.startswith('$GPHDT') or sentence.startswith('$GNHDT'):
+            if not self.allow_hdt:
+                return None
             return self.parse_gphdt(sentence)
         else:
             return None

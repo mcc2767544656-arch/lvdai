@@ -77,7 +77,9 @@ class RTKDriverNode:
         self.device = create_interface(config)
 
         # 创建NMEA解析器
-        self.parser = NMEAParser(heading_timeout_s=self.heading_timeout_s)
+        # 双天线只认 KSXT/GPTHS；HDT 无解状态，失锁时会输出 0.0000，必须禁用。
+        self.parser = NMEAParser(heading_timeout_s=self.heading_timeout_s,
+                                 allow_hdt=False)
 
         # 状态变量
         self.last_valid_data = None
