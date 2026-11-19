@@ -41,7 +41,7 @@ nodes:
       pwm_frequency: 50.0
       left_pwmchip: pwmchip0
       left_pwm_channel: 0
-      right_pwmchip: pwmchip4
+      right_pwmchip: pwmchip1
       right_pwm_channel: 0
 
       # RC脉宽

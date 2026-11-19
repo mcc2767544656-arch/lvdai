@@ -4,17 +4,21 @@ RTK驱动节点主程序
 高精度GPS定位数据采集与输出
 """
 
+import os
 import sys
 import time
 import math
+import threading
 
 from edge.sdk.nodeflow_sdk import NodeFlowSDK, die
 if __package__:
     from .nmea_parser import NMEAParser
     from .device_interface import create_interface
+    from .ntrip_client import NTRIPClient
 else:
     from nmea_parser import NMEAParser
     from device_interface import create_interface
+    from ntrip_client import NTRIPClient
 
 
 class RTKDriverNode:
@@ -55,6 +59,30 @@ class RTKDriverNode:
         self.heading_timeout_s = float(self.sdk.get_param("heading_timeout_s", 0.5))
         self.enable_raw_log = self.sdk.get_param("enable_raw_log", False)
         self.raw_log_path = self.sdk.get_param("raw_log_path", "/tmp/rtk_raw.log")
+
+        # NTRIP 差分改正（旁路 Air700E 的 4G：由主机侧取 RTCM 灌回接收机）
+        # 背景：模块 4G 未拿到 IP 时 NTRIP 永远卡在 wait IP_READY，GGA 质量停在 1。
+        self.ntrip_enable = bool(self.sdk.get_param("ntrip_enable", False))
+        self.ntrip_host = self.sdk.get_param("ntrip_host", "")
+        self.ntrip_port = int(self.sdk.get_param("ntrip_port", 8002))
+        self.ntrip_mount = self.sdk.get_param("ntrip_mount", "")
+        self.ntrip_user = self.sdk.get_param("ntrip_user", "")
+        self.ntrip_password = self.sdk.get_param("ntrip_password", "")
+        # 密码不进仓库：优先显式参数，其次环境变量，最后读文件。
+        self.ntrip_password_env = self.sdk.get_param("ntrip_password_env", "NTRIP_PASSWORD")
+        self.ntrip_password_file = self.sdk.get_param("ntrip_password_file", "")
+        self.ntrip_gga_interval_s = float(self.sdk.get_param("ntrip_gga_interval_s", 1.0))
+        self.ntrip_reconnect_s = float(self.sdk.get_param("ntrip_reconnect_s", 5.0))
+        self.ntrip_timeout_s = float(self.sdk.get_param("ntrip_timeout_s", 5.0))
+
+        self._last_gga = None
+        self._last_gga_time = 0.0
+        self._ntrip = None
+        self._ntrip_thread = None
+        self._ntrip_stop = threading.Event()
+        self._ntrip_bytes = 0
+        self._ntrip_gga_up = 0
+        self._ntrip_last_gga_up = 0.0
 
         # 天线安装校准参数
         self.antenna_offset_x = self.sdk.get_param("antenna_offset_x", 0.0)
@@ -110,6 +138,11 @@ class RTKDriverNode:
         self.logger.info(f"  Output Frequency: {self.output_frequency} Hz")
         self.logger.info(f"  Min RTK Quality: {self.min_rtk_quality}")
         self.logger.info(f"  Min Satellites: {self.min_satellites}")
+        if self.ntrip_enable:
+            self.logger.info(f"  NTRIP: {self.ntrip_host}:{self.ntrip_port}/{self.ntrip_mount} "
+                             f"(user={self.ntrip_user or '-'}, gga {self.ntrip_gga_interval_s:g}s)")
+        else:
+            self.logger.info("  NTRIP: disabled")
 
     def setup(self):
         """连接RTK设备并配置"""
@@ -131,6 +164,9 @@ class RTKDriverNode:
         # 配置RTK设备输出频率
         time.sleep(1.0)  # 等待设备稳定
         self._configure_device()
+
+        if self.ntrip_enable:
+            self._start_ntrip()
 
         self.logger.info("RTK Driver Node ready")
 
@@ -167,6 +203,13 @@ class RTKDriverNode:
         if not data:
             return
 
+        # NTRIP 必须先拿到接收机自己的 GGA 才能获得 VRS 差分。
+        # 这一步放在质量门限之前：单点解阶段 quality=1 会被 _validate_data
+        # 拦下，若放在后面就永远上传不了位置，服务器也就永远不下发 RTCM。
+        if self.ntrip_enable and data.get('message_type') == 'GPGGA':
+            self._last_gga = line
+            self._last_gga_time = time.time()
+
         self.message_count += 1
 
         # 检查数据完整性和质量
@@ -198,6 +241,8 @@ class RTKDriverNode:
         """清理资源"""
         self.logger.info("Shutting down RTK Driver Node...")
 
+        self._stop_ntrip()
+
         # 关闭设备连接
         if self.device:
             self.device.disconnect()
@@ -215,6 +260,85 @@ class RTKDriverNode:
         self.logger.info(f"Total messages processed: {self.message_count}")
         self.logger.info(f"Total errors: {self.error_count}")
         self.logger.info("RTK Driver Node stopped")
+
+    # ── NTRIP 差分改正 ────────────────────────────────────────────────────
+    def _resolve_ntrip_password(self) -> str:
+        """密码不进仓库：显式参数 > 环境变量 > 密码文件。"""
+        if self.ntrip_password:
+            return self.ntrip_password
+        env_value = os.environ.get(self.ntrip_password_env or "", "")
+        if env_value:
+            return env_value
+        if self.ntrip_password_file:
+            try:
+                with open(self.ntrip_password_file) as fh:
+                    return fh.read().strip()
+            except OSError as exc:
+                self.logger.warning(f"NTRIP password file unreadable: {exc}")
+        return ""
+
+    def _start_ntrip(self):
+        if not self.ntrip_host or not self.ntrip_mount:
+            self.logger.error("NTRIP enabled but ntrip_host/ntrip_mount missing; corrections off")
+            return
+        password = self._resolve_ntrip_password()
+        if not password:
+            self.logger.error(
+                f"NTRIP password missing (param / env {self.ntrip_password_env} / file); "
+                "corrections off")
+            return
+        self._ntrip = NTRIPClient(self.ntrip_host, self.ntrip_port, self.ntrip_mount,
+                                  self.ntrip_user, password, timeout=self.ntrip_timeout_s)
+        self._ntrip_thread = threading.Thread(target=self._ntrip_loop, name="ntrip", daemon=True)
+        self._ntrip_thread.start()
+        self.logger.info("NTRIP correction thread started")
+
+    def _ntrip_loop(self):
+        """后台：连 NTRIP → 周期上行 GGA → 下行 RTCM 写回接收机串口。"""
+        backoff = 1.0
+        while not self._ntrip_stop.is_set():
+            if not self._ntrip.connected:
+                # VRS 类 caster 必须先收到 GGA 才应答，所以等接收机给出定位再连
+                now0 = time.time()
+                gga_ready = self._last_gga and now0 - self._last_gga_time < 5.0
+                if not gga_ready:
+                    self._ntrip_stop.wait(0.5)
+                    continue
+                if not self._ntrip.connect(initial_gga=self._last_gga):
+                    self.logger.warning(
+                        f"NTRIP connect failed ({self._ntrip.last_error}); retry in {backoff:g}s")
+                    self._ntrip_stop.wait(backoff)
+                    backoff = min(backoff * 2, 30.0)
+                    continue
+                backoff = 1.0
+                # 握手时已经上行过一次 GGA，重置计时避免立刻重复发送
+                self._ntrip_last_gga_up = time.time()
+                self.logger.info(
+                    f"NTRIP connected: {self.ntrip_host}:{self.ntrip_port}/{self.ntrip_mount}")
+
+            now = time.time()
+            gga_fresh = self._last_gga and now - self._last_gga_time < 5.0
+            if gga_fresh and now - self._ntrip_last_gga_up >= self.ntrip_gga_interval_s:
+                if self._ntrip.send_gga(self._last_gga):
+                    self._ntrip_last_gga_up = now
+                    self._ntrip_gga_up += 1
+
+            chunk = self._ntrip.poll(timeout=0.2)
+            if chunk:
+                if self.device.write_bytes(chunk):
+                    self._ntrip_bytes += len(chunk)
+                else:
+                    self.logger.warning("NTRIP: serial write failed, dropping corrections")
+
+    def _stop_ntrip(self):
+        self._ntrip_stop.set()
+        if self._ntrip_thread and self._ntrip_thread.is_alive():
+            self._ntrip_thread.join(timeout=3.0)
+        if self._ntrip:
+            self._ntrip.close()
+        if self.ntrip_enable:
+            self.logger.info(
+                f"NTRIP stats: gga_up={self._ntrip_gga_up}, rtcm={self._ntrip_bytes}B")
 
     def _configure_device(self):
         """配置RTK设备输出"""

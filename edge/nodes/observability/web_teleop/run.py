@@ -20,6 +20,13 @@ from edge.sdk.nodeflow_sdk import NodeFlowSDK
 class TeleopHandler(SimpleHTTPRequestHandler):
     """HTTP请求处理器"""
 
+    # HTTP/1.1 + keep-alive：手机端每个请求不必重新建 TCP 连接，
+    # 热点链路上能显著降低指令往返延迟。
+    protocol_version = "HTTP/1.1"
+
+    # 空闲 keep-alive 连接最多保持 5s，避免线程被长期占住
+    timeout = 5
+
     # 共享状态（由主节点设置）
     node_instance = None
 
@@ -69,10 +76,13 @@ class TeleopHandler(SimpleHTTPRequestHandler):
                 "maxAngularSpeed": self.node_instance.max_angular_speed if self.node_instance else 1.0,
             }
             content = content.replace("{{CONFIG}}", json.dumps(config))
+            body = content.encode("utf-8")
             self.send_response(200)
             self.send_header("Content-Type", "text/html; charset=utf-8")
+            self.send_header("Cache-Control", "no-store")
+            self.send_header("Content-Length", str(len(body)))
             self.end_headers()
-            self.wfile.write(content.encode("utf-8"))
+            self.wfile.write(body)
         else:
             self.send_error(404, "index.html not found")
 
@@ -125,11 +135,13 @@ class TeleopHandler(SimpleHTTPRequestHandler):
 
     def send_json(self, data, status_code=200):
         """发送JSON响应"""
+        body = json.dumps(data).encode("utf-8")
         self.send_response(status_code)
         self.send_header("Content-Type", "application/json")
         self.send_header("Access-Control-Allow-Origin", "*")
+        self.send_header("Content-Length", str(len(body)))
         self.end_headers()
-        self.wfile.write(json.dumps(data).encode("utf-8"))
+        self.wfile.write(body)
 
     def log_message(self, format, *args):
         """禁用默认日志"""
@@ -137,8 +149,14 @@ class TeleopHandler(SimpleHTTPRequestHandler):
 
 
 class ThreadedHTTPServer(ThreadingMixIn, HTTPServer):
-    """支持多线程的HTTP服务器"""
+    """支持多线程的HTTP服务器
+
+    keep-alive 下每个空闲连接会占住一个请求线程，关停时不能等它们自然结束，
+    否则 shutdown/退出会被拖到超时（之前表现为节点 5s 后被 SIGKILL）。
+    """
     daemon = True
+    daemon_threads = True
+    block_on_close = False
 
 
 class WebTeleopNode:
@@ -288,7 +306,9 @@ class WebTeleopNode:
                     auto_cmd = self.auto_velocity_port.recv_latest()
                     if auto_cmd:
                         self.current_linear = auto_cmd.get("linear_velocity", 0.0)
-                        self.current_angular = auto_cmd.get("angular_velocity", 0.0)
+                        # track_controller 正角速度 = 左转(CCW)；手动摇杆正 = 右转。
+                        # pwm_driver 的 invert_angular 已适配手动，自动这里取反抵消。
+                        self.current_angular = -auto_cmd.get("angular_velocity", 0.0)
                         self._send_velocity_command()
                 else:
                     # 手动模式
@@ -325,6 +345,7 @@ class WebTeleopNode:
         # 关闭HTTP服务器
         if self.http_server:
             self.http_server.shutdown()
+            self.http_server.server_close()
             self.sdk.logger.info("HTTP server stopped")
 
 

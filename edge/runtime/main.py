@@ -312,17 +312,27 @@ class NodeFlowRuntime:
             raise ValueError(f"preset_yaml must be a simple filename, got: {preset_yaml}")
         filename = preset_yaml if preset_yaml.endswith(".yaml") else f"{preset_yaml}.yaml"
         root = Path(os.getenv("NODEFLOW_ROOT", Path.cwd())).resolve()
-        candidate = (root / "examples" / filename).resolve()
-        examples_root = (root / "examples").resolve()
-        if candidate.parent != examples_root or not candidate.is_file():
-            raise ValueError(f"Unknown task preset: {preset_yaml}")
+        # 预置图搜索路径：configs/graphs/ 是版本化主配置，examples/ 是教学副本
+        candidate = None
+        for subdir in ("configs/graphs", "examples"):
+            path = (root / subdir / filename).resolve()
+            if path.parent == (root / subdir).resolve() and path.is_file():
+                candidate = path
+                break
+        if candidate is None:
+            raise ValueError(
+                f"Unknown task preset: {preset_yaml} "
+                f"(searched configs/graphs and examples)"
+            )
         current = Path(self.config_path).resolve()
         if current == candidate:
             return True
         if self.dataflow_running:
             raise RuntimeError("Cannot switch task preset while dataflow is running")
 
-        logger.info("Switching task preset: %s -> %s", current.name, candidate.name)
+        logger.info(
+            "Switching task preset: %s -> %s", current, candidate
+        )
         self.config_path = str(candidate)
         self.config = None
         self.registry = None

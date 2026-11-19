@@ -27,6 +27,8 @@
 - [结构化日志](STRUCTURED_LOGGING_GUIDE.md) 与 [日志速查](LOGS_CHEATSHEET.md)
 - [守护模式](DAEMON_MODE_GUIDE.md) 与 [多轮运行](MULTI_LOOP_GUIDE.md)
 - [边缘调试指南](EDGE_DEBUG_GUIDE.md)
+- [工作记录](工作记录/README.md)：按日期归档的开发与联调记录（含踩坑与标定数据）
+- [工作汇报](工作汇报/README.md)：按周/月归档的汇报材料（结论、指标、风险与计划）
 - [云端开发](../cloud/docs/DEVELOPMENT.md)、[前端指南](../cloud/docs/FRONTEND_GUIDE.md) 与 [云边集成](../cloud/doc/CLOUD_INTEGRATION.md)
 - [仿真文档索引](../simulation/docs/README.md)
 

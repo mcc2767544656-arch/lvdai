@@ -84,7 +84,7 @@ class PWMDriverNode:
         self.pwm_frequency = float(sdk.get_param('pwm_frequency', 50.0))
         self.left_pwmchip = sdk.get_param('left_pwmchip', 'pwmchip0')
         self.left_pwm_channel = int(sdk.get_param('left_pwm_channel', 0))
-        self.right_pwmchip = sdk.get_param('right_pwmchip', 'pwmchip4')
+        self.right_pwmchip = sdk.get_param('right_pwmchip', 'pwmchip1')
         self.right_pwm_channel = int(sdk.get_param('right_pwm_channel', 0))
 
         # RC PWM 脉宽参数 (纳秒)
@@ -104,6 +104,8 @@ class PWMDriverNode:
         self.left_speed_scale = float(sdk.get_param('left_speed_scale', 1.0))
         self.right_speed_scale = float(sdk.get_param('right_speed_scale', 1.0))
         self.angular_velocity_bias = float(sdk.get_param('angular_velocity_bias', 0.0))
+        self.invert_linear = bool(sdk.get_param('invert_linear', False))
+        self.invert_angular = bool(sdk.get_param('invert_angular', False))
         self.pwm_deadzone_ns = int(sdk.get_param('pwm_deadzone_ns', 0))
 
         # 安全参数
@@ -372,6 +374,10 @@ class PWMDriverNode:
                     # 获取速度命令
                     v_linear = velocity_data.get('linear_velocity', 0.0)
                     w_angular = velocity_data.get('angular_velocity', 0.0)
+                    if self.invert_linear:
+                        v_linear = -v_linear
+                    if self.invert_angular:
+                        w_angular = -w_angular
                     cmd_timestamp = velocity_data.get('timestamp', time.time())
 
                     if velocity_data.get('safety_stop'):

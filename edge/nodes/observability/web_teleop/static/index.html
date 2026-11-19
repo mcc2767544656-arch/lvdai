@@ -2,7 +2,7 @@
 <html lang="zh-CN">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, viewport-fit=cover">
     <title>NodeFlow Teleop</title>
     <style>
         * {
@@ -17,15 +17,17 @@
             background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
             color: #fff;
             min-height: 100vh;
-            overflow: hidden;
+            overflow-x: hidden;
+            overflow-y: auto;
             touch-action: none;
         }
 
         .container {
             max-width: 600px;
             margin: 0 auto;
-            padding: 20px;
+            padding: 16px 16px 8px;
             height: 100vh;
+            height: 100dvh;
             display: flex;
             flex-direction: column;
         }
@@ -69,10 +71,12 @@
         /* 虚拟手柄区域 */
         .joystick-area {
             flex: 1;
+            min-height: 0;
             display: flex;
             gap: 20px;
             align-items: center;
             justify-content: center;
+            padding: 8px 0;
         }
 
         .joystick-container {
@@ -117,7 +121,13 @@
         .controls {
             display: flex;
             gap: 10px;
-            margin-bottom: 15px;
+            margin-bottom: 0;
+            flex-shrink: 0;
+            position: sticky;
+            bottom: 0;
+            z-index: 20;
+            padding: 10px 0 calc(10px + env(safe-area-inset-bottom));
+            background: linear-gradient(180deg, rgba(22,33,62,0) 0%, #16213e 45%);
         }
 
         .btn {
@@ -305,6 +315,25 @@
             opacity: 0.3;
             pointer-events: none;
         }
+        @media (max-width: 480px) {
+            .container { padding: 12px 12px 6px; }
+            h1 { font-size: 1.2rem; margin-bottom: 6px; }
+            .status-bar { padding: 10px; margin-bottom: 8px; }
+            .status-value { font-size: 1.25rem; }
+            .joystick-area { gap: 12px; }
+            .joystick-container { width: 140px; height: 140px; }
+            .joystick-handle { width: 56px; height: 56px; }
+            .btn { padding: 13px; font-size: 0.95rem; }
+            .keyboard-hint { display: none; }
+            .mode-toggle { padding: 9px 12px; margin-bottom: 8px; }
+        }
+
+        @media (max-height: 700px) {
+            .joystick-container { width: 128px; height: 128px; }
+            .status-bar { padding: 8px; margin-bottom: 8px; }
+            .status-value { font-size: 1.15rem; }
+            .keyboard-hint { display: none; }
+        }
     </style>
 </head>
 <body>
@@ -349,7 +378,7 @@
             </label>
         </div>
 
-        <div class="joystick-area" id="joystickArea">>
+        <div class="joystick-area" id="joystickArea">
             <div class="joystick-container" id="joystickLinear">
                 <span class="joystick-label">前进/后退</span>
                 <div class="joystick-handle" id="handleLinear"></div>
@@ -392,26 +421,50 @@
         // API 基础地址
         const API_BASE = '';
 
-        // 发送控制命令
+        // 带超时的 fetch：单个请求卡死不能把控制通道堵死
+        async function fetchWithTimeout(url, options = {}, timeoutMs = 250) {
+            const controller = new AbortController();
+            const timer = setTimeout(() => controller.abort(), timeoutMs);
+            try {
+                return await fetch(url, Object.assign({}, options, { signal: controller.signal }));
+            } finally {
+                clearTimeout(timer);
+            }
+        }
+
+        // 发送控制命令（同一时刻只允许一个请求在途，最新状态在结束后补发）
         let controlInFlight = false;
+        let pendingControl = false;
         async function sendControl() {
             if (passthroughEnabled) return;  // 透传模式下不发送手动控制
+            if (controlInFlight) { pendingControl = true; return; }
 
             controlInFlight = true;
             try {
-                await fetch(API_BASE + '/api/control', {
-                    method: 'POST',
-                    headers: {'Content-Type': 'application/json'},
-                    body: JSON.stringify({
-                        linear: state.linear,
-                        angular: state.angular
-                    })
-                });
-                updateConnectionStatus(true);
-            } catch (e) {
-                updateConnectionStatus(false);
+                do {
+                    pendingControl = false;
+                    const payload = { linear: state.linear, angular: state.angular };
+                    try {
+                        await fetchWithTimeout(API_BASE + '/api/control', {
+                            method: 'POST',
+                            headers: {'Content-Type': 'application/json'},
+                            body: JSON.stringify(payload)
+                        });
+                        updateConnectionStatus(true);
+                    } catch (e) {
+                        updateConnectionStatus(false);
+                    }
+                } while (pendingControl);
             } finally {
                 controlInFlight = false;
+            }
+        }
+
+        // 松手/急停时连发零指令：单次丢失不会让电机继续跑
+        function sendControlBurst(times = 3, gapMs = 60) {
+            sendControl();
+            for (let i = 1; i < times; i++) {
+                setTimeout(() => { sendControl(); }, gapMs * i);
             }
         }
 
@@ -470,14 +523,20 @@
             document.getElementById('angularBar').style.width = angularPercent.toFixed(1) + '%';
 
             // 更新手柄位置
-            updateJoystickHandle('handleLinear', state.linear, CONFIG.maxLinearSpeed);
-            updateJoystickHandle('handleAngular', state.angular, CONFIG.maxAngularSpeed);
+            updateJoystickHandle('handleLinear', state.linear, CONFIG.maxLinearSpeed, 'linear');
+            updateJoystickHandle('handleAngular', state.angular, CONFIG.maxAngularSpeed, 'angular');
         }
 
-        function updateJoystickHandle(handleId, value, max) {
+        function updateJoystickHandle(handleId, value, max, axis) {
             const handle = document.getElementById(handleId);
             const offset = (value / max) * 55; // 最大偏移55px
-            handle.style.transform = `translate(calc(-50% + ${offset}px), -50%)`;
+            if (axis === 'linear') {
+                // 前进/后退：沿 Y 轴，向上为正
+                handle.style.transform = `translate(-50%, calc(-50% - ${offset}px))`;
+            } else {
+                // 左转/右转：沿 X 轴，向右为正
+                handle.style.transform = `translate(calc(-50% + ${offset}px), -50%)`;
+            }
         }
 
         // 手柄控制类
@@ -564,7 +623,8 @@
             setValue(value) {
                 this.currentValue = value;
                 updateJoystickHandle(this.handle.id, value,
-                    this.axis === 'linear' ? CONFIG.maxLinearSpeed : CONFIG.maxAngularSpeed);
+                    this.axis === 'linear' ? CONFIG.maxLinearSpeed : CONFIG.maxAngularSpeed,
+                    this.axis);
             }
         }
 
@@ -572,13 +632,13 @@
         const linearJoystick = new Joystick('joystickLinear', 'handleLinear', (value) => {
             state.linear = value * CONFIG.maxLinearSpeed;
             updateDisplay();
-            sendControl();
+            if (value === 0) sendControlBurst(); else sendControl();
         }, 'linear');
 
         const angularJoystick = new Joystick('joystickAngular', 'handleAngular', (value) => {
             state.angular = value * CONFIG.maxAngularSpeed;
             updateDisplay();
-            sendControl();
+            if (value === 0) sendControlBurst(); else sendControl();
         }, 'angular');
 
         // 键盘控制
@@ -623,7 +683,7 @@
             state.linear = linear * CONFIG.maxLinearSpeed;
             state.angular = angular * CONFIG.maxAngularSpeed;
             updateDisplay();
-            sendControl();
+            if (state.linear === 0 && state.angular === 0) sendControlBurst(); else sendControl();
         }
 
         // 按钮
@@ -631,7 +691,7 @@
             state.linear = 0;
             state.angular = 0;
             updateDisplay();
-            sendControl();
+            sendControlBurst();
         });
 
         document.getElementById('btnReset').addEventListener('click', () => {
@@ -640,7 +700,7 @@
             linearJoystick.setValue(0);
             angularJoystick.setValue(0);
             updateDisplay();
-            sendControl();
+            sendControlBurst();
         });
 
         // 模式切换
@@ -648,10 +708,13 @@
             setMode(e.target.checked);
         });
 
-        // 定期获取状态
+        // 定期获取状态（上一帧没回来就不发新的，避免请求堆积）
+        let statusInFlight = false;
         setInterval(async () => {
+            if (statusInFlight) return;
+            statusInFlight = true;
             try {
-                const res = await fetch(API_BASE + '/api/status');
+                const res = await fetchWithTimeout(API_BASE + '/api/status', {}, 400);
                 const data = await res.json();
                 if (data.feedback) {
                     feedback.linear = data.feedback.linear_velocity || 0;
@@ -664,16 +727,18 @@
                 updateConnectionStatus(true);
             } catch (e) {
                 updateConnectionStatus(false);
+            } finally {
+                statusInFlight = false;
             }
-        }, 200);
+        }, 300);
 
-        // 心跳：非零指令期间每 200ms 重发。后端 command_timeout（默认 1s）
-        // 据此区分“手指按住不动”和“网络断开/页面卡死”——后者自动停车。
-        const HEARTBEAT_MS = 200;
+        // 非零指令固定 50ms 重发，按住不动时指令不会停在旧值上。
+        // 后端 command_timeout（0.3s）据此判断“页面失联”并自动停车。
+        const CONTROL_RESEND_MS = 50;
         setInterval(() => {
-            if (passthroughEnabled || controlInFlight) return;
+            if (passthroughEnabled) return;
             if (state.linear !== 0 || state.angular !== 0) sendControl();
-        }, HEARTBEAT_MS);
+        }, CONTROL_RESEND_MS);
 
         // 失焦/切后台/离开页面：一律归零停车
         function stopAll() {
@@ -686,7 +751,7 @@
             state.linear = 0;
             state.angular = 0;
             updateDisplay();
-            sendControl();
+            sendControlBurst();
         }
         window.addEventListener('blur', stopAll);
         document.addEventListener('visibilitychange', () => {

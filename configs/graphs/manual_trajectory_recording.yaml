@@ -171,7 +171,7 @@ nodes:
       pwm_frequency: 50.0              # PWM频率（Hz）RC标准50Hz
       left_pwmchip: pwmchip0           # 左轮PWM芯片
       left_pwm_channel: 0              # 左轮PWM通道
-      right_pwmchip: pwmchip4          # 右轮PWM芯片（PWM14 = febf0020 = pwmchip4）
+      right_pwmchip: pwmchip1          # 右轮PWM芯片（PWM1 = fd8b0010 = pwmchip1，28脚）
       right_pwm_channel: 0             # 右轮PWM通道
 
       # ========== RC PWM脉宽参数 ==========

@@ -384,6 +384,13 @@ def create_parser() -> argparse.ArgumentParser:
         description='启动数据流（框架必须已运行）'
     )
     runtime_start_df_parser.add_argument(
+        '--preset',
+        metavar='NAME',
+        default=argparse.SUPPRESS,
+        help='热加载预置图（configs/graphs 或 examples 下的文件名，可省略 .yaml）；'
+             '需要数据流已停止，不需要重启框架'
+    )
+    runtime_start_df_parser.add_argument(
         '--json',
         action='store_true',
         default=argparse.SUPPRESS,
@@ -408,6 +415,12 @@ def create_parser() -> argparse.ArgumentParser:
         'restart-dataflow',
         help='重启数据流',
         description='先停止再启动数据流'
+    )
+    runtime_restart_df_parser.add_argument(
+        '--preset',
+        metavar='NAME',
+        default=argparse.SUPPRESS,
+        help='重启时顺带热加载预置图（configs/graphs 或 examples 下的文件名）'
     )
     runtime_restart_df_parser.add_argument(
         '--json',

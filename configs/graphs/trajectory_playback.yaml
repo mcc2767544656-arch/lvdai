@@ -34,7 +34,7 @@ nodes:
     description: "加载录制的轨迹文件，转换为ENU路径"
     params:
       # 轨迹文件路径（留空则自动选最新的）
-      trajectory_file: ""
+      trajectory_file: "/root/field/route_20261119.csv"
 
       # 记录目录（position_recorder 的输出目录）
       # records_dir: ./node-hub/position_recorder/data/records
@@ -53,15 +53,19 @@ nodes:
     package: sensing/rtk_driver
     description: "从RTK GPS设备读取高精度定位数据"
     params:
-      serial_port: /dev/serial/by-id/usb-AirM2M_AirM2M_Compo_000000000001-if06  # UM982 数据口
+      serial_port: /dev/serial/by-id/usb-AirM2M_AirM2M_Compo_000000000001-if06  # UM982 数据口（按当前 by-id）
       serial_baudrate: 115200
       serial_timeout: 1.0
       use_network: false
-      nmea_message: GPRMC
-      output_frequency: 20
+      nmea_message: KSXT
+      output_frequency: 10
+      configure_position_rate: false
       min_rtk_quality: 3               # 3=FIXED（最高），设4会过滤掉所有数据
       min_satellites: 10
       enable_smoothing: false
+      heading_offset_deg: 180.0      # 双天线装反，航向翻转 180°
+      enable_raw_log: true
+      raw_log_path: "/root/field/manual_route.log"
 
   # ┌─────────────────────────────────────────────────────────────────────┐
   # │ RTK滤波器                                                            │
@@ -108,13 +112,17 @@ nodes:
     package: control/track_controller
     description: "履带控制，支持原地转向"
     params:
-      max_speed: 0.5                   # 首次测试降低速度
-      min_speed: 0.0
+      max_speed: 0.3                   # 首次测试降低速度
+      min_speed: 0.15                  # 2026-11-19: 0.0 时转弯段被压到 0.046，低于 ESC 死区卡住
       heading_p_gain: 2.0
       max_angular_velocity: 1.0
       pivot_threshold_deg: 20.0
       decel_start_distance: 5.0        # 点间距大，提前减速
       final_stop_distance: 0.5
+      pose_timeout_s: 1.0              # pose 更新约 3.6Hz，0.5s 会误触发 stale_pose
+      target_timeout_s: 1.0
+      progress_timeout_s: 1.0
+      allow_work_pivot: true           # 转弯口无前进空间，允许原地转向对齐
 
   # ┌─────────────────────────────────────────────────────────────────────┐
   # │ PWM驱动节点                                                          │
@@ -124,9 +132,12 @@ nodes:
     description: "将速度命令转换为电机PWM信号"
     params:
       pwm_frequency: 50.0
+      drive_mode: direct             # 驱动器内部做坦克混控：CH1=油门，CH2=转向
+      invert_linear: true           # 前进/后退对调（电机线接反）
+      invert_angular: true          # 左转/右转对调
       left_pwmchip: pwmchip0
       left_pwm_channel: 0
-      right_pwmchip: pwmchip4
+      right_pwmchip: pwmchip1
       right_pwm_channel: 0
       pwm_min_ns: 1000000
       pwm_center_ns: 1500000
@@ -137,7 +148,28 @@ nodes:
       max_angular_speed: 4.0           # 2 × max_linear / wheel_base
       enable_safety_check: true
       command_timeout: 0.5
-      dry_run_mode: true               # 默认不输出PWM；现场确认链路后改 false
+      dry_run_mode: false               # 默认不输出PWM；现场确认链路后改 false
+
+  - id: path_progress
+    package: planning/path_progress
+    description: "路径进度投影（给前瞻点选择器同步）"
+    params:
+      search_window: 120
+      heading_match_weight_m: 2.0
+      publish_interval: 0.02
+
+  - id: web_teleop
+    package: observability/web_teleop
+    description: "Web遥控 / 自动透传切换"
+    params:
+      http_port: 9873
+      http_host: "0.0.0.0"
+      passthrough_mode: false          # 直线测试：手动确认后切自动
+      max_linear_speed: 0.5
+      max_angular_speed: 1.0
+      continuous_output: true
+      output_rate: 10.0
+      command_timeout: 1.0
 
 # ═══════════════════════════════════════════════════════════════════════════
 # 数据连接（边）
@@ -154,7 +186,7 @@ safety_resources:
   drive_pwm:
     owner: pwm_driver
     handler: linux_sysfs_pwm_pair
-    dry_run: true
+    dry_run: false
     params_from_owner:
       frequency_hz: pwm_frequency
       neutral_high_pulse_ns: pwm_center_ns
@@ -175,6 +207,11 @@ edges:
   - from: trajectory_loader.global_path
     to: waypoint_selector.global_path
     description: "录制的轨迹路径（ENU坐标）"
+
+  # 轨迹加载器 → 前瞻点选择器（带段语义的作业计划，连接后优先）
+  - from: trajectory_loader.operation_plan
+    to: waypoint_selector.operation_plan
+    description: "录制轨迹的作业计划（work/transit 段）"
 
   # 轨迹加载器 → 坐标转换（GPS参考点）
   - from: trajectory_loader.task_enu
@@ -214,7 +251,27 @@ edges:
     to: track_controller.pose_enu
     description: "实时ENU位姿 → 轨迹控制"
 
-  # 速度指令 → PWM驱动
+  # 自动速度 → 遥控节点（透传模式）
   - from: track_controller.velocity_cmd
+    to: web_teleop.auto_velocity
+    description: "自动速度命令"
+
+  # 遥控节点 → PWM驱动（自动/手动切换后的最终速度）
+  - from: web_teleop.velocity_cmd
     to: pwm_driver.velocity_cmd
-    description: "速度命令（linear_velocity, angular_velocity）"
+    description: "自动或手动速度命令"
+
+  # 路径进度 → 轨迹控制器
+  - from: path_progress.progress_state
+    to: track_controller.path_progress
+    description: "路径进度同步"
+  # 作业计划/位姿 → 路径进度
+  - from: trajectory_loader.operation_plan
+    to: path_progress.operation_plan
+    description: "作业计划 → 路径投影"
+  - from: coord_transform.pose_enu
+    to: path_progress.pose_enu
+    description: "实时位姿 → 路径投影"
+  - from: path_progress.progress_state
+    to: waypoint_selector.path_progress
+    description: "路径进度 → 前瞻点同步"

@@ -47,6 +47,18 @@ nodes:
       min_rtk_quality: 3                # 3=FIXED（最高），4会过滤掉所有数据
       min_satellites: 10
 
+      # NTRIP 差分改正：模块侧已自行联网（2026-11-12 换卡后恢复），主机侧旁路关闭，
+      # 避免两条 VRS 差分同时灌进接收机。需要临时兜底时把 ntrip_enable 改回 true。
+      # 密码不写在这里：export NTRIP_PASSWORD=xxxx 或写 ntrip_password_file
+      ntrip_enable: false
+      ntrip_host: "120.253.239.161"
+      ntrip_port: 8002                  # 8002=WGS84 / 8001=CGCS2000
+      ntrip_mount: "RTCM33_GRCEJ"       # 五星十六频；RTCM33_GRC 为三星八频
+      ntrip_user: "cvha2771"
+      ntrip_password_env: "NTRIP_PASSWORD"
+      ntrip_password_file: "/home/orangepi/.config/nodeflow/ntrip_password"  # 权限600，密码不进仓库
+      ntrip_gga_interval_s: 1.0         # VRS 必须收到 GGA 才会下发 RTCM
+
       # 数据处理
       enable_smoothing: false
       heading_source: "dual_antenna"    # 主天线→从天线，不能用RMC运动方向替代
@@ -160,7 +172,7 @@ nodes:
       pwm_frequency: 50.0
       left_pwmchip: pwmchip0
       left_pwm_channel: 0
-      right_pwmchip: pwmchip4
+      right_pwmchip: pwmchip1
       right_pwm_channel: 0
 
       # PWM脉宽范围（纳秒）

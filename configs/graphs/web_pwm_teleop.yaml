@@ -27,11 +27,11 @@ nodes:
     params:
       http_host: 0.0.0.0
       http_port: 9873
-      max_linear_speed: 1.0
+      max_linear_speed: 0.5             # 现场限速：满杆 0.5（原 1.0，实测 1.0≈1.56m/s）
       max_angular_speed: 4.0
       continuous_output: true
-      output_rate: 10.0
-      command_timeout: 1.0          # 前端按住时 200ms 心跳；断线 1s 停车
+      output_rate: 20.0
+      command_timeout: 0.5          # 前端 50ms 重发；单次请求慢（>0.3s）不再误停车（2026-11-19 现场调）
 
   - id: pwm_driver
     package: io/pwm_driver
@@ -41,7 +41,7 @@ nodes:
       pwm_frequency: 50.0
       left_pwmchip: pwmchip0
       left_pwm_channel: 0
-      right_pwmchip: pwmchip4
+      right_pwmchip: pwmchip1
       right_pwm_channel: 0
 
       # RC脉宽
@@ -49,11 +49,20 @@ nodes:
       pwm_center_ns: 1500000
       pwm_max_ns: 2000000
       pwm_duty_scale: 1.0
+      pwm_inverted_polarity: true       # 香橙派 PWM 默认 inverse 极性：duty_cycle 为低电平时间
 
       # 车辆参数
       wheel_base: 0.5
       max_linear_speed: 1.0
       max_angular_speed: 4.0           # 2 × max_linear / wheel_base，确保纯转向可拉满PWM
+
+      # 驱动模式：direct = 关闭软件混控（CH1 线速度/油门，CH2 角速度/转向，混控交给底盘驱动器）
+      #           differential = 软件差速（左右履带各一路 PWM）
+      drive_mode: direct
+
+      # 方向标定：直驱模式现场实测前进/后退与左右转向均与摇杆相反，故取反
+      invert_linear: true
+      invert_angular: true
 
       # 安全
       enable_safety_check: true
@@ -62,7 +71,7 @@ nodes:
 
       # 调试 - 默认 dry_run，确认网页与链路正常后再切 false
       enable_verbose_log: false
-      dry_run_mode: true                # 默认不输出PWM；现场确认链路后改 false
+      dry_run_mode: false                # 默认不输出PWM；现场确认链路后改 false
 
 # ═══════════════════════════════════════════════════════════════════════════
 # 资源安全绑定（节点异常退出契约）：pwm_driver 崩溃/被 SIGKILL 时由 runtime 回中位。
@@ -75,7 +84,7 @@ safety_resources:
   drive_pwm:
     owner: pwm_driver
     handler: linux_sysfs_pwm_pair
-    dry_run: true
+    dry_run: false
     params_from_owner:
       frequency_hz: pwm_frequency
       neutral_high_pulse_ns: pwm_center_ns

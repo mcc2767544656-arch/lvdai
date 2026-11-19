@@ -136,3 +136,61 @@ params:
     type: str
     default: "/tmp/rtk_raw.log"
     description: "原始数据日志路径"
+
+  # NTRIP 差分改正（主机侧旁路）
+  # 模块 Air700E 自带 NTRIP 依赖其 4G；4G 无 IP 时会卡在 wait IP_READY，
+  # GGA 质量恒为 1。打开后由本节点用主机网络取 RTCM，直接写回接收机串口。
+  ntrip_enable:
+    type: bool
+    default: false
+    description: "是否启用主机侧 NTRIP 差分（上行 GGA、下行 RTCM 写入串口）"
+
+  ntrip_host:
+    type: str
+    default: ""
+    description: "CORS/NTRIP 服务器地址"
+
+  ntrip_port:
+    type: int
+    default: 8002
+    description: "NTRIP 端口（8002=WGS84）"
+
+  ntrip_mount:
+    type: str
+    default: ""
+    description: "挂载点，如 RTCM33_GRCEJ"
+
+  ntrip_user:
+    type: str
+    default: ""
+    description: "CORS 账号"
+
+  ntrip_password:
+    type: str
+    default: ""
+    description: "CORS 密码；留空则依次读环境变量/密码文件，避免密码进仓库"
+
+  ntrip_password_env:
+    type: str
+    default: "NTRIP_PASSWORD"
+    description: "存放密码的环境变量名"
+
+  ntrip_password_file:
+    type: str
+    default: ""
+    description: "密码文件路径（可选，优先级低于环境变量）"
+
+  ntrip_gga_interval_s:
+    type: float
+    default: 1.0
+    description: "GGA 上行间隔（秒）。VRS 必须收到 GGA 才下发 RTCM"
+
+  ntrip_reconnect_s:
+    type: float
+    default: 5.0
+    description: "NTRIP 断线重连基值（秒，指数退避）"
+
+  ntrip_timeout_s:
+    type: float
+    default: 5.0
+    description: "NTRIP 连接/读取超时（秒）"

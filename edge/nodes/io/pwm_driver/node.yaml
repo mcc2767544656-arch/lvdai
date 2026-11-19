@@ -48,7 +48,7 @@ failure_policy:
   rearm:
     mode: manual_then_fresh
     input: velocity_cmd
-  deadline_ms: null
+  deadline_ms: 200
 
 
 
@@ -72,8 +72,8 @@ params:
 
   right_pwmchip:
     type: str
-    default: "pwmchip4"
-    description: "右轮PWM芯片 (sysfs路径: /sys/class/pwm/{value})，香橙派5 Ultra的PWM14对应pwmchip4"
+    default: "pwmchip1"
+    description: "右轮PWM芯片 (sysfs路径: /sys/class/pwm/{value})，香橙派5 Pro的PWM1对应pwmchip1（28脚）"
 
   right_pwm_channel:
     type: int
@@ -101,6 +101,16 @@ params:
     type: str
     default: "differential"
     description: "驱动模式: differential=差速(左右轮独立PWM), direct=直驱(通道1油门/通道2转向)"
+
+  invert_linear:
+    type: bool
+    default: false
+    description: "反向线速度：前进/后退对调（电机线接反时使用）"
+
+  invert_angular:
+    type: bool
+    default: false
+    description: "反向角速度：左转/右转对调"
 
   wheel_base:
     type: float

@@ -38,6 +38,14 @@ class DeviceInterface(ABC):
         """写入数据"""
         pass
 
+    def write_bytes(self, data: bytes) -> bool:
+        """写入原始字节（RTCM 等二进制流），不加行尾。
+
+        默认返回 False：只有串口实现了二进制直写。文本接口若被用来灌
+        RTCM，追加的 \\r\\n 会破坏帧结构，所以这里不提供通用降级实现。
+        """
+        return False
+
 
 class SerialInterface(DeviceInterface):
     """串口通信接口"""
@@ -156,6 +164,16 @@ class SerialInterface(DeviceInterface):
             self.serial.write(data.encode('ascii'))
             return True
 
+        except serial.SerialException:
+            return False
+
+    def write_bytes(self, data: bytes) -> bool:
+        """原样写入二进制数据（NTRIP 下行的 RTCM3），不追加 \\r\\n。"""
+        if not self.is_connected() or not data:
+            return False
+        try:
+            self.serial.write(data)
+            return True
         except serial.SerialException:
             return False
 

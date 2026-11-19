@@ -407,8 +407,12 @@ def get_runtime_status():
     return result
 
 
-def start_dataflow():
-    """启动数据流（通过控制缓冲区）"""
+def start_dataflow(preset: str = ""):
+    """启动数据流（通过控制缓冲区）
+
+    preset 非空时，runtime 会先热加载该预置图（换配置、重建节点图），
+    再启动数据流——无需重启框架进程。要求数据流当前已停止。
+    """
     if not is_runtime_running():
         return {
             "status": "not_running",
@@ -419,13 +423,20 @@ def start_dataflow():
         from edge.sdk.shared_buffer_lite import SharedBufferLite
 
         # 写入启动命令到控制缓冲区
+        payload = {"command": "start_dataflow", "timestamp": time.time()}
+        if preset:
+            payload["preset_yaml"] = preset
         buf = SharedBufferLite("runtime.control", create=False)
-        seq = buf.write({"command": "start_dataflow", "timestamp": time.time()})
+        seq = buf.write(payload)
         buf.close()
+
+        message = "Start dataflow command sent"
+        if preset:
+            message += f" (preset: {preset})"
 
         return {
             "status": "success",
-            "message": "Start dataflow command sent",
+            "message": message,
             "sequence": seq,
         }
     except FileNotFoundError:
@@ -473,8 +484,8 @@ def stop_dataflow():
         }
 
 
-def restart_dataflow():
-    """重启数据流"""
+def restart_dataflow(preset: str = ""):
+    """重启数据流（可顺带热加载预置图）"""
     result1 = stop_dataflow()
     if result1["status"] != "success":
         return result1
@@ -482,13 +493,17 @@ def restart_dataflow():
     # 等待停止完成
     time.sleep(1)
 
-    result2 = start_dataflow()
+    result2 = start_dataflow(preset)
     if result2["status"] != "success":
         return result2
 
+    message = "Dataflow restarted"
+    if preset:
+        message += f" (preset: {preset})"
+
     return {
         "status": "success",
-        "message": "Dataflow restarted"
+        "message": message
     }
 
 
@@ -511,13 +526,13 @@ def handle_runtime_command(args):
         result = get_runtime_status()
 
     elif subcommand == "start-dataflow":
-        result = start_dataflow()
+        result = start_dataflow(getattr(args, "preset", "") or "")
 
     elif subcommand == "stop-dataflow":
         result = stop_dataflow()
 
     elif subcommand == "restart-dataflow":
-        result = restart_dataflow()
+        result = restart_dataflow(getattr(args, "preset", "") or "")
 
     else:
         result = {"status": "error", "message": f"Unknown subcommand: {subcommand}"}

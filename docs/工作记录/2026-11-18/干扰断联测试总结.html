@@ -1,0 +1,171 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>2026-11-18 干扰 / 断联测试总结</title>
+<style>
+  :root{
+    --ink:#1b2430; --muted:#5b6b7c; --line:#e3e9f0;
+    --bg:#f5f7fa; --card:#ffffff; --accent:#0f766e; --accent-soft:#e6f4f1;
+    --warn:#b45309; --warn-soft:#fdf3e3; --ok:#166534; --ok-soft:#e8f5ec;
+  }
+  *{box-sizing:border-box}
+  body{
+    margin:0; padding:32px 18px 56px; background:var(--bg); color:var(--ink);
+    font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","PingFang SC","Hiragino Sans GB","Microsoft YaHei",sans-serif;
+    line-height:1.7; -webkit-font-smoothing:antialiased;
+  }
+  .wrap{max-width:920px;margin:0 auto}
+  header{
+    background:linear-gradient(135deg,#0f2f2b,#134e4a 55%,#0f766e);
+    color:#fff; border-radius:16px; padding:28px 30px; margin-bottom:22px;
+    box-shadow:0 10px 30px rgba(15,47,43,.18);
+  }
+  header .tag{
+    display:inline-block; font-size:12px; letter-spacing:.12em; text-transform:uppercase;
+    background:rgba(255,255,255,.14); padding:4px 10px; border-radius:999px; margin-bottom:12px;
+  }
+  header h1{margin:0 0 8px; font-size:26px; line-height:1.35; font-weight:700}
+  header p{margin:0; color:#cfe7e2; font-size:14px}
+  .kpis{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin:0 0 22px}
+  .kpi{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:16px 14px;text-align:center}
+  .kpi .v{font-size:26px;font-weight:700;color:var(--accent);font-variant-numeric:tabular-nums}
+  .kpi .l{font-size:12px;color:var(--muted);margin-top:2px}
+  section{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:24px 26px;margin-bottom:18px}
+  h2{font-size:18px;margin:0 0 6px;display:flex;align-items:center;gap:10px}
+  h2 .num{
+    display:inline-flex;align-items:center;justify-content:center;width:26px;height:26px;
+    background:var(--accent-soft);color:var(--accent);border-radius:8px;font-size:13px;font-weight:700;
+  }
+  .sub{color:var(--muted);font-size:13px;margin:0 0 16px}
+  table{width:100%;border-collapse:collapse;font-size:14px;margin:6px 0 4px}
+  th,td{text-align:left;padding:9px 10px;border-bottom:1px solid var(--line);vertical-align:top}
+  th{font-size:12px;color:var(--muted);font-weight:600;letter-spacing:.03em;background:#fafcfe}
+  td.num{font-variant-numeric:tabular-nums;white-space:nowrap}
+  .good{color:var(--ok);font-weight:600}
+  .warn{color:var(--warn);font-weight:600}
+  .pill{display:inline-block;font-size:12px;padding:1px 8px;border-radius:999px;background:var(--accent-soft);color:var(--accent);font-weight:600}
+  .pill.w{background:var(--warn-soft);color:var(--warn)}
+  .note{background:#fbfdff;border-left:3px solid var(--accent);padding:12px 14px;border-radius:0 8px 8px 0;font-size:13.5px;color:#374151;margin:14px 0 0}
+  ul{margin:8px 0 0;padding-left:20px}
+  li{margin:7px 0}
+  footer{color:var(--muted);font-size:12.5px;text-align:center;margin-top:26px}
+  .tools{margin-top:18px;text-align:right}
+  button{
+    font:inherit;font-size:13px;padding:8px 16px;border-radius:8px;border:1px solid var(--line);
+    background:#fff;color:var(--ink);cursor:pointer
+  }
+  button:hover{border-color:var(--accent);color:var(--accent)}
+  @media (max-width:680px){
+    body{padding:18px 12px 40px}
+    .kpis{grid-template-columns:repeat(2,1fr)}
+    section{padding:18px 16px}
+    header{padding:22px 18px}
+    header h1{font-size:21px}
+  }
+  @media print{
+    body{background:#fff;padding:0}
+    section,header{box-shadow:none;border-color:#ddd}
+    .tools{display:none}
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <header>
+    <span class="tag">Field Test Summary</span>
+    <h1>干扰 / 断联测试总结</h1>
+    <p>2026-11-18 · Orange Pi 5 Pro + UM982 + Air700E · 针对 11-12 的「电机负载下串口冻结」</p>
+  </header>
+
+  <div class="kpis">
+    <div class="kpi"><div class="v">0</div><div class="l">断流（&gt;0.5s）</div></div>
+    <div class="kpi"><div class="v">0</div><div class="l">NMEA 坏帧</div></div>
+    <div class="kpi"><div class="v">0</div><div class="l">USB 复位 / 重连</div></div>
+    <div class="kpi"><div class="v">0.15<span style="font-size:16px">s</span></div><div class="l">最大数据间隔</div></div>
+  </div>
+
+  <section>
+    <h2><span class="num">1</span>没有复现断联</h2>
+    <p class="sub">板子夹在电机与控制器之间，遥控原地旋转，同期也在用网页遥控推杆。</p>
+
+    <table>
+      <thead>
+        <tr><th>指标</th><th>旋转（15:45–15:56，约 10 分钟）</th><th>静置（16:16–16:22，5 分钟）</th></tr>
+      </thead>
+      <tbody>
+        <tr><td>串口行率</td><td class="num">27.8–28.0 行/秒</td><td class="num">28.0 行/秒</td></tr>
+        <tr><td>最大数据间隔</td><td class="num good">0.15 s</td><td class="num good">0.15 s</td></tr>
+        <tr><td>断流事件（&gt;0.5 s）</td><td class="num good">0</td><td class="num good">0</td></tr>
+        <tr><td>NMEA 坏帧</td><td class="num good">0</td><td class="num good">0</td></tr>
+        <tr><td>USB 复位 / 重连</td><td class="num good">0 / 0</td><td class="num good">0 / 0</td></tr>
+        <tr><td>无线链路</td><td class="num">热点移近后 -35~-40 dBm，丢包 0</td><td class="num">—</td></tr>
+      </tbody>
+    </table>
+
+    <div class="note">
+      <strong>结论：</strong>今天没有找到电磁干扰击穿 USB / 串口链路的证据。11-12 那次 129 秒冻结没有复现；原地旋转的负载与振动不足以触发，触发条件可能与当天不同。
+    </div>
+  </section>
+
+  <section>
+    <h2><span class="num">2</span>三次“假异常”，根因在测量工具</h2>
+    <p class="sub">这三次都一度看起来像故障，查下来都是监测脚本自身的问题，已全部修复。</p>
+
+    <table>
+      <thead>
+        <tr><th style="width:92px">时间</th><th style="width:150px">现象</th><th>根因</th><th style="width:150px">处理</th></tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td class="num">15:40:47</td>
+          <td><span class="pill w">1.04 s 断流</span></td>
+          <td>脚本在串口读取循环里同步执行 <code>ping</code>，一次超时把循环阻塞了 1 秒，时间戳被拉长。</td>
+          <td>ping / WiFi 探测移到独立线程，复测后消失。</td>
+        </tr>
+        <tr>
+          <td class="num">16:16–16:22</td>
+          <td><span class="pill w">298 条坏帧</span></td>
+          <td>串口里的 <code>#HEADINGA</code> 是 NovAtel 格式日志，被当成 NMEA 语句做校验。</td>
+          <td>只校验 <code>$</code> 开头的语句，坏帧归零。</td>
+        </tr>
+        <tr>
+          <td class="num">16:12–16:15</td>
+          <td><span class="pill w">约 3 分钟无数据</span></td>
+          <td>反复开关 <code>/dev/ttyACM3</code>，且有多个进程同时抢读同一个串口。</td>
+          <td>静置 5 分钟无自发断流，判定为操作所致，非模块故障。</td>
+        </tr>
+      </tbody>
+    </table>
+
+    <div class="note">
+      <strong>为什么要写下来：</strong>这三条都不是设备问题，但形态和真故障几乎一样。以后再看到“断流 / 坏帧”，先确认是不是测量方式造成的，再下结论。
+    </div>
+  </section>
+
+  <section>
+    <h2><span class="num">4</span>这次没覆盖到的</h2>
+    <p class="sub">以下四点决定了今天不能下“问题已解决”的结论，只能下“本次未复现”。</p>
+    <ul>
+      <li><strong>工况不同：</strong>原地打滑的电流、振动、履带负载都小于实际行驶与高速转向（11-12 的冻结发生在指令 3.0–4.0 的高速转向）。</li>
+      <li><strong>耦合路径不同：</strong>测试时 Pi 未参与驱动、PWM 线不接驱动器，线束布局与实车不一致。</li>
+      <li><strong>无卫星：</strong>地下车库 0 星，解算层（定位质量、差分龄期、SNR）本次没有观测到。</li>
+      <li><strong>未直接测供电：</strong>没有测量 5V 轨的电压跌落；USB 无事件只能排除“被拉挂”，排不掉“缓慢掉压”。</li>
+    </ul>
+    <div class="note">
+      <strong>下一步：</strong>室外有固定解后，用合并版监测跑真实工况（直线 + 转向 + 负载），把“基线 / 转动”区间分开对比；测试时记录开始/停止时间点，便于对齐。
+    </div>
+  </section>
+
+  <div class="tools">
+    <button onclick="window.print()">打印 / 存为 PDF</button>
+  </div>
+
+  <footer>
+    数据来源：2026-11-18 现场监测日志 · 完整记录见 <code>docs/工作记录/2026-11-18/干扰断联测试小结.md</code>
+  </footer>
+</div>
+</body>
+</html>
