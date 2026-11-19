@@ -1,0 +1,220 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>2026-11-19 工作报告 · RTK 恢复与自动回放</title>
+<style>
+  :root{
+    --ink:#1b2430; --muted:#5b6b7c; --line:#e3e9f0; --bg:#f5f7fa; --card:#fff;
+    --accent:#0f766e; --accent-soft:#e6f4f1; --warn:#b45309; --warn-soft:#fdf3e3;
+    --ok:#166534; --ok-soft:#e8f5ec; --bad:#9f1239; --bad-soft:#fdecef;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;padding:32px 18px 56px;background:var(--bg);color:var(--ink);line-height:1.72;
+    font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","PingFang SC","Hiragino Sans GB","Microsoft YaHei",sans-serif;
+    -webkit-font-smoothing:antialiased}
+  .wrap{max-width:940px;margin:0 auto}
+  header{background:linear-gradient(135deg,#0f2f2b,#134e4a 55%,#0f766e);color:#fff;border-radius:16px;
+    padding:28px 30px;margin-bottom:20px;box-shadow:0 10px 30px rgba(15,47,43,.18)}
+  header .tag{display:inline-block;font-size:12px;letter-spacing:.12em;text-transform:uppercase;
+    background:rgba(255,255,255,.14);padding:4px 10px;border-radius:999px;margin-bottom:12px}
+  header h1{margin:0 0 8px;font-size:25px;line-height:1.35}
+  header p{margin:0;color:#cfe7e2;font-size:14px}
+  .kpis{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:20px}
+  .kpi{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:15px 12px;text-align:center}
+  .kpi .v{font-size:24px;font-weight:700;color:var(--accent);font-variant-numeric:tabular-nums}
+  .kpi .l{font-size:12px;color:var(--muted);margin-top:2px}
+  section{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:22px 24px;margin-bottom:16px}
+  h2{font-size:17px;margin:0 0 4px;display:flex;align-items:center;gap:9px}
+  h2 .num{display:inline-flex;align-items:center;justify-content:center;width:25px;height:25px;
+    background:var(--accent-soft);color:var(--accent);border-radius:8px;font-size:12px;font-weight:700}
+  .sub{color:var(--muted);font-size:13px;margin:0 0 14px}
+  table{width:100%;border-collapse:collapse;font-size:13.5px;margin:6px 0}
+  th,td{text-align:left;padding:8px 10px;border-bottom:1px solid var(--line);vertical-align:top}
+  th{font-size:12px;color:var(--muted);font-weight:600;background:#fafcfe}
+  td.num{font-variant-numeric:tabular-nums;white-space:nowrap}
+  .good{color:var(--ok);font-weight:600}
+  .bad{color:var(--bad);font-weight:600}
+  .warn{color:var(--warn);font-weight:600}
+  .pill{display:inline-block;font-size:11.5px;padding:1px 8px;border-radius:999px;background:var(--accent-soft);color:var(--accent);font-weight:600}
+  .pill.w{background:var(--warn-soft);color:var(--warn)}
+  .pill.b{background:var(--bad-soft);color:var(--bad)}
+  .note{background:#fbfdff;border-left:3px solid var(--accent);padding:11px 14px;border-radius:0 8px 8px 0;font-size:13.5px;color:#374151;margin:12px 0 0}
+  .note.w{border-left-color:var(--warn);background:#fffbf5}
+  ul{margin:6px 0 0;padding-left:20px}
+  li{margin:5px 0}
+  .chartbox{border:1px solid var(--line);border-radius:10px;padding:8px;background:#fff;margin-top:8px}
+  .legend{display:flex;gap:16px;font-size:12px;color:var(--muted);margin-top:6px;padding-left:6px}
+  .legend i{display:inline-block;width:14px;height:3px;vertical-align:middle;margin-right:5px;border-radius:2px}
+  .tools{text-align:right;margin-top:14px}
+  button{font:inherit;font-size:13px;padding:8px 16px;border-radius:8px;border:1px solid var(--line);background:#fff;cursor:pointer}
+  button:hover{border-color:var(--accent);color:var(--accent)}
+  footer{color:var(--muted);font-size:12.5px;text-align:center;margin-top:22px}
+  @media (max-width:680px){body{padding:18px 12px 40px}.kpis{grid-template-columns:repeat(2,1fr)}
+    section{padding:18px 16px}header{padding:22px 18px}header h1{font-size:20px}}
+  @media print{body{background:#fff;padding:0}section,header{box-shadow:none}.tools{display:none}}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<header>
+  <span class="tag">Daily Work Report</span>
+  <h1>2026-11-19 工作报告：RTK 恢复、路线录制与自动回放</h1>
+  <p>Orange Pi 5 Pro · UM982 + Air700E · 室外场地 · 从“定位掉单点”到“自动跑完 104 米”</p>
+</header>
+
+<div class="kpis">
+  <div class="kpi"><div class="v">4</div><div class="l">RTK 固定解（质量）</div></div>
+  <div class="kpi"><div class="v">106.8<span style="font-size:15px">m</span></div><div class="l">录制路线长度</div></div>
+  <div class="kpi"><div class="v">103.8<span style="font-size:15px">m</span></div><div class="l">自动回放进度</div></div>
+  <div class="kpi"><div class="v">0.24<span style="font-size:15px">m</span></div><div class="l">平均横向误差</div></div>
+</div>
+
+<section>
+  <h2><span class="num">1</span>今天解决了什么</h2>
+  <p class="sub">一句话：定位从单点恢复成固定解，人工路线录下来了，自动回放从“原地不动”跑到能完整跟随。</p>
+  <table>
+    <thead><tr><th style="width:110px">事项</th><th>结果</th></tr></thead>
+    <tbody>
+      <tr><td>定位掉单点</td><td><span class="good">已解决</span> · 根因是 CORS 换了供应商、账号不匹配，不是到期</td></tr>
+      <tr><td>USB 反复重枚举</td><td><span class="warn">未根治</span> · 已改为按 by-id 自动跟随，回放期间未再丢数据</td></tr>
+      <tr><td>路线录制</td><td><span class="good">完成</span> · 106.8 m / 1538 点 / 148.7 s，无断档</td></tr>
+      <tr><td>首次自动回放</td><td><span class="bad">卡住</span> · 指令仅 0.046 m/s，低于驱动器死区</td></tr>
+      <tr><td>修复后回放</td><td><span class="good">跑通</span> · 103.8 / 106.8 m，横向误差均值 0.20 m</td></tr>
+    </tbody>
+  </table>
+</section>
+
+<section>
+  <h2><span class="num">2</span>NTRIP：不是账号到期，是供应商换了</h2>
+  <p class="sub">现象：GGA 质量 1（单点）、差分龄期为空，模块每 2 秒报 <code>ERROR - Bad Password</code>。</p>
+  <table>
+    <thead><tr><th>项</th><th>旧配置（失效）</th><th>新配置（可用）</th></tr></thead>
+    <tbody>
+      <tr><td>地址</td><td class="num">120.253.239.161</td><td class="num">103.143.19.54</td></tr>
+      <tr><td>端口</td><td class="num">8002</td><td class="num">8002 = WGS84(2005)</td></tr>
+      <tr><td>挂载点</td><td class="num">RTCM33_GRCEJ</td><td class="num">RTCM33GRCEJpro</td></tr>
+      <tr><td>账号</td><td class="num">cvha2771</td><td class="num">xnny91360（密码不入库）</td></tr>
+      <tr><td>结果</td><td><span class="bad">Bad Password</span></td><td><span class="good">ICY 200 OK → 质量 4</span></td></tr>
+    </tbody>
+  </table>
+  <div class="note">
+    <strong>验证：</strong>从 Pi 侧直接请求新地址返回 <code>ICY 200 OK</code>；写入模块后 30 秒内 <code>quality=4</code>、30–32 星、HDOP 0.6、差分龄期 1.0 s。<br>
+    <strong>注意：</strong>板子重启后 NTRIP 不会自动工作，需要 <code>$sne,1,*49</code> 重新使能，约 45 秒恢复固定解。
+  </div>
+</section>
+
+<section>
+  <h2><span class="num">3</span>路线录制</h2>
+  <p class="sub">为不改动已稳定的接收机配置，用独立记录器读 KSXT（10 Hz）直接落 CSV。</p>
+  <table>
+    <thead><tr><th>点数</th><th>时长</th><th>长度</th><th>平均 / 最大速度</th><th>数据断档</th></tr></thead>
+    <tbody><tr>
+      <td class="num">1538</td><td class="num">148.7 s</td><td class="num">106.8 m</td>
+      <td class="num">0.72 / 1.75 m/s</td><td class="num good">0 次（最大间隔 0.35 s）</td>
+    </tr></tbody>
+  </table>
+  <div class="note">起点 <code>28.92038575, 120.04696407</code>，终点距起点 2.6 m，接近闭合；覆盖范围 38.9 m × 30.8 m。</div>
+</section>
+
+<section>
+  <h2><span class="num">4</span>自动回放：先卡住，再跑通</h2>
+  <p class="sub">第一次回放车纹丝不动——控制器只给 0.046 m/s。</p>
+  <table>
+    <thead><tr><th>环节</th><th>数值</th><th>说明</th></tr></thead>
+    <tbody>
+      <tr><td>起点判定</td><td class="num">headland_turn</td><td>路线起步段被标成“地头转弯”</td></tr>
+      <tr><td>转弯系数</td><td class="num">× 0.25</td><td><code>headland_turn_min_speed_factor</code></td></tr>
+      <tr><td>接近减速</td><td class="num">× 0.57</td><td>距目标 1.9 m / 减速起点 5 m</td></tr>
+      <tr><td>最终指令</td><td class="num bad">0.046 m/s</td><td>低于 ESC 死区（约 0.07–0.1），车不动</td></tr>
+      <tr><td>修复</td><td class="num good">min_speed 0.15</td><td>因子上乘后再兜底，不受转弯系数影响</td></tr>
+    </tbody>
+  </table>
+</section>
+
+<section>
+  <h2><span class="num">5</span>回放结果与误差曲线</h2>
+  <p class="sub">沿 106.8 m 路线跑完 103.8 m；下图是全程带符号横向误差（正 = 路线右侧）。</p>
+  <div class="chartbox"><svg viewBox="0 0 860 300" xmlns="http://www.w3.org/2000/svg" style="width:100%;height:auto">
+<rect x="0" y="0" width="860" height="300" fill="#ffffff"/>
+<rect x="52" y="78.5" width="790" height="121.0" fill="#eef7f3"/>
+<line x1="52" y1="260.0" x2="842" y2="260.0" stroke="#e3e9f0" stroke-width="1"/><text x="44" y="264.0" text-anchor="end" font-size="11" fill="#7b8794">-1.0</text><line x1="52" y1="199.5" x2="842" y2="199.5" stroke="#e3e9f0" stroke-width="1"/><text x="44" y="203.5" text-anchor="end" font-size="11" fill="#7b8794">-0.5</text><line x1="52" y1="139.0" x2="842" y2="139.0" stroke="#e3e9f0" stroke-width="1"/><text x="44" y="143.0" text-anchor="end" font-size="11" fill="#7b8794">+0.0</text><line x1="52" y1="78.5" x2="842" y2="78.5" stroke="#e3e9f0" stroke-width="1"/><text x="44" y="82.5" text-anchor="end" font-size="11" fill="#7b8794">+0.5</text><line x1="52" y1="18.0" x2="842" y2="18.0" stroke="#e3e9f0" stroke-width="1"/><text x="44" y="22.0" text-anchor="end" font-size="11" fill="#7b8794">+1.0</text><text x="52.0" y="278" text-anchor="middle" font-size="11" fill="#7b8794">0</text><text x="199.7" y="278" text-anchor="middle" font-size="11" fill="#7b8794">20</text><text x="347.3" y="278" text-anchor="middle" font-size="11" fill="#7b8794">40</text><text x="495.0" y="278" text-anchor="middle" font-size="11" fill="#7b8794">60</text><text x="642.7" y="278" text-anchor="middle" font-size="11" fill="#7b8794">80</text><text x="790.3" y="278" text-anchor="middle" font-size="11" fill="#7b8794">100</text><text x="938.0" y="278" text-anchor="middle" font-size="11" fill="#7b8794">120</text>
+<polyline points="52.4,89.9 52.4,113.8 52.4,141.6 53.8,119.7 55.3,118.8 57.7,119.4 59.4,118.6 61.9,119.8 63.7,118.8 65.4,117.5 67.1,115.8 69.5,117.7 71.3,116.3 73.0,116.1 75.3,113.7 77.8,113.5 79.5,111.6 81.2,111.1 82.9,110.8 85.2,112.1 87.5,111.2 90.5,112.3 93.5,114.3 95.8,114.5 98.1,114.5 100.5,116.9 103.5,117.1 105.8,118.0 108.0,119.9 109.2,120.1 111.7,118.3 114.6,123.7 117.0,122.9 119.3,127.2 121.6,131.6 124.1,130.5 743.2,135.3 128.1,121.0 129.8,121.9 132.0,120.2 134.0,116.1 731.3,121.4 729.1,126.8 726.8,140.6 725.2,147.1 722.9,154.3 721.3,159.7 148.6,112.3 150.3,112.6 152.7,110.6 153.9,108.6 156.1,110.4 158.6,107.2 160.3,106.4 162.1,104.5 163.9,104.9 166.2,103.1 167.4,102.3 170.4,102.3 172.1,102.3 173.3,100.8 176.3,103.4 178.0,102.8 179.7,103.5 181.4,105.2 184.3,105.8 679.5,169.1 675.4,170.8 673.7,164.8 671.2,154.2 669.5,140.3 667.2,130.4 664.4,136.0 203.6,133.0 205.9,135.4 208.2,132.7 210.6,133.9 213.3,138.6 215.8,148.8 218.1,149.7 220.5,155.4 223.4,158.5 225.7,160.5 227.9,158.0 230.2,156.9 232.6,163.1 235.5,161.4 237.9,158.7 240.3,157.0 243.2,164.1 245.5,166.3 247.8,168.7 615.8,112.2 613.5,115.7 611.1,124.1 608.2,137.7 605.3,139.6 603.0,139.8 600.6,140.0 598.2,137.3 595.3,135.0 593.0,136.7 590.1,133.3 587.7,133.4 585.4,137.3 582.6,138.8 580.2,139.7 577.3,142.7 575.0,145.2 572.6,152.2 569.6,152.8 567.3,156.4 564.9,161.2 562.6,165.6 559.7,170.7 556.9,168.3 554.5,168.9 552.2,168.4 549.3,168.8 547.0,169.5 544.5,169.5 324.2,171.1 326.5,167.8 329.5,167.9 331.9,165.0 334.3,170.5 336.6,170.1 339.5,169.6 341.9,173.1 344.2,172.7 346.5,170.7 348.2,167.2 350.5,166.8 352.3,165.2 354.0,166.0 355.8,166.8 358.2,165.8 360.0,164.9 361.7,164.7 363.9,165.3 365.7,164.2 367.5,163.4 369.3,163.0 371.6,163.2 373.3,161.2 375.7,163.5 377.4,162.4 379.1,160.6 381.0,165.8 383.4,164.8 385.1,163.0 386.8,162.1 389.1,159.8 390.9,160.2 392.7,161.5 394.9,160.0 396.7,157.9 399.0,158.5 400.8,160.1 402.5,158.4 404.3,157.6 406.7,156.0 408.4,155.1 410.2,156.4 411.9,169.7 412.4,183.5 417.8,187.1 418.5,226.1 418.5,230.9 430.8,230.4 431.2,206.0 432.6,228.0 434.9,227.3 435.4,221.8 441.5,205.2 442.1,181.0 453.6,213.8 454.2,219.1 455.3,237.7 458.2,220.8 459.3,209.7 461.1,193.3 462.9,183.9 464.6,169.1 467.0,159.6 468.7,147.8 470.5,142.5 472.3,135.9 473.4,138.7 475.7,133.0 477.6,124.9 479.3,119.3 481.7,114.6 483.5,110.2 485.8,107.3 488.1,112.4 490.4,113.3 492.7,111.7 495.7,111.5 498.1,111.8 500.4,114.3 503.3,116.4 505.7,116.1 508.4,121.4 510.8,126.4 513.1,130.6 516.0,133.9 518.3,137.8 521.2,142.4 523.6,147.2 525.9,150.7 528.2,152.0 531.2,156.2 533.5,161.3 536.4,163.4 538.8,164.3 539.9,165.2 542.2,166.0 544.5,167.3 547.0,167.7 549.3,171.3 313.8,170.2 311.4,169.3 309.0,164.2 306.1,165.5 303.7,165.9 564.9,164.6 567.3,158.9 569.6,156.7 572.6,154.9 575.0,150.6 577.3,143.6 579.6,138.9 582.6,135.8 584.8,131.2 587.2,129.6 589.5,126.0 592.4,124.0 594.7,122.2 597.0,125.2 599.5,131.8 601.8,133.8 604.7,136.6 607.0,140.6 608.8,135.7 611.1,125.1 612.8,119.5 614.6,116.2 249.5,163.1 247.3,160.3 245.5,157.7 243.2,156.0 241.4,154.7 239.8,148.8 237.3,148.6 235.5,151.0 233.8,153.8 232.0,154.4 229.6,154.3 227.9,155.1 225.7,157.2 224.0,159.3 222.1,159.0 219.3,158.1 217.5,157.7 215.8,160.0 213.3,156.4 211.8,152.7 210.1,157.2 207.6,158.8 206.5,160.7 204.2,163.5 202.4,169.0 200.7,158.0 199.5,152.1 197.3,141.7 195.0,135.6 193.1,143.0 191.4,147.6 676.5,125.0 677.7,124.5 185.6,166.6 682.4,107.0 684.2,105.0 686.4,104.2 688.2,103.3 690.5,102.2 691.7,103.8 694.0,104.1 696.4,102.5 698.2,101.5 700.5,100.3 702.3,101.8 703.0,119.1 704.7,130.4 706.6,136.8 708.8,144.9 710.6,150.1 713.4,148.0 715.1,129.0 716.6,118.4 718.3,110.6 146.3,160.6 143.8,156.1 142.1,148.8 140.3,145.6 137.9,138.4 136.2,133.2 134.5,126.9 132.0,124.8 130.4,118.8 128.7,116.2 742.5,133.4 744.3,118.5 749.0,116.4 750.8,118.5 752.5,121.9 755.0,117.9 757.3,126.7 758.5,132.3 760.9,133.2 762.6,137.4 764.4,140.3 766.8,144.5 768.5,146.1 770.2,151.0 772.7,155.2 774.4,159.6 776.1,164.4 778.4,167.8 780.1,174.0 782.5,177.0 784.3,178.9 786.6,182.2 788.3,184.8 790.2,187.6 791.8,191.6 794.2,190.8 796.0,193.9 798.3,195.8 799.5,198.3 801.8,200.4 803.6,200.2 806.0,201.2 807.7,203.9 810.2,200.8 812.0,199.3 813.6,198.1 816.0,197.6 818.4,197.5" fill="none" stroke="#0f766e" stroke-width="1.6" stroke-linejoin="round"/>
+<line x1="52" y1="139.0" x2="842" y2="139.0" stroke="#9aa7b4" stroke-width="1" stroke-dasharray="4 3"/>
+<text x="447.0" y="294" text-anchor="middle" font-size="11" fill="#5b6b7c">沿路线里程 (m)</text>
+<text x="14" y="139.0" text-anchor="middle" font-size="11" fill="#5b6b7c" transform="rotate(-90 14 139.0)">横向误差 (m，正=右)</text>
+</svg></div>
+  <div class="legend"><span><i style="background:#0f766e"></i>横向误差</span><span><i style="background:#9aa7b4"></i>零线</span><span><i style="background:#eef7f3"></i>±0.5 m 带</span></div>
+
+  <table style="margin-top:14px">
+    <thead><tr><th>指标</th><th>值</th><th>指标</th><th>值</th></tr></thead>
+    <tbody>
+      <tr><td>进度</td><td class="num">103.8 / 106.8 m</td><td>用时</td><td class="num">579.3 s（9.7 min）</td></tr>
+      <tr><td>平均误差</td><td class="num">0.237 m</td><td>p95</td><td class="num">0.501 m</td></tr>
+      <tr><td>RMS</td><td class="num">0.273 m</td><td>最大</td><td class="num">0.842 m</td></tr>
+      <tr><td>系统偏置</td><td class="num">-0.020 m</td><td>平均速度</td><td class="num">0.18 m/s</td></tr>
+    </tbody>
+  </table>
+  <div class="note">误差分布：≤0.1 m 占 13.6%，≤0.2 m 占 39.9%，≤0.3 m 占 79.2%，≤0.5 m 占 94.9%，全部 &lt; 1 m。</div>
+</section>
+
+<section>
+  <h2><span class="num">6</span>误差分析：直线 vs 转弯</h2>
+  <p class="sub">按参考线曲率分类（重采样 0.2 m、1 m 平滑）。</p>
+  <table>
+    <thead><tr><th>类型</th><th>占比</th><th>平均 |e|</th><th>p95</th><th>最大</th></tr></thead>
+    <tbody>
+      <tr><td>直线（R &gt; 20 m）</td><td class="num">68%</td><td class="num">0.228 m</td><td class="num">0.435</td><td class="num">0.552</td></tr>
+      <tr><td>缓弯（R 5–20 m）</td><td class="num">22%</td><td class="num">0.207 m</td><td class="num">0.390</td><td class="num">0.692</td></tr>
+      <tr><td>急弯（R &lt; 5 m）</td><td class="num">10%</td><td class="num">0.371 m</td><td class="num">0.760</td><td class="num">0.842</td></tr>
+    </tbody>
+  </table>
+  <div class="note">
+    <strong>形态：</strong>误差是沿着路线缓慢漂移的低频摆动——10 m 分段内标准差只有 0.02–0.13 m，但段均值在 +0.24 与 -0.27 之间缓慢来回（周期约 50 m），不是高频抖动，也不是定位噪声。<br>
+    <strong>主因排序：</strong>① 低速（0.15–0.18 m/s）下转向小指令落在死区/非线性区（0.5 rad/s 指令实测仅 0.07–0.09），横向修正“够不着”，形成慢摆；② 急弯（R&lt;5 m）时前瞻 2 m + 压速到 0.15，切弯最明显（均值 0.37 m）；③ 履带滑移/左右差速未标定。已排除：录制线抖动（0.03 m）、RTK 噪声、固定侧偏（带符号偏置仅 -0.020 m，内切/外切 46%/54%）。
+  </div>
+</section>
+
+<section>
+  <h2><span class="num">7</span>回放图节点（9 个）</h2>
+  <table>
+    <thead><tr><th style="width:170px">节点</th><th>作用</th></tr></thead>
+    <tbody>
+      <tr><td><code>trajectory_loader</code></td><td>读 CSV/JSON 轨迹 → ENU 路径 + 作业计划，10 Hz 发布</td></tr>
+      <tr><td><code>rtk_driver</code></td><td>读 UM982（KSXT 10 Hz），输出位置/航向/质量；<code>heading_offset=180</code></td></tr>
+      <tr><td><code>rtk_filter</code></td><td>位置/航向一阶滤波（α 0.2 / 0.3）</td></tr>
+      <tr><td><code>coord_transform</code></td><td>WGS84 → 本地 ENU，参考点取轨迹首点</td></tr>
+      <tr><td><code>path_progress</code></td><td>位姿投影到路径，输出段号、里程、横向/航向误差</td></tr>
+      <tr><td><code>waypoint_selector</code></td><td>视野内选前瞻点（2 m / 宽 4 m），处理初始消费与转弯预判</td></tr>
+      <tr><td><code>track_controller</code></td><td>履带速度+角速度控制，支持原地转向；<code>max 0.3</code>、<code>min 0.15</code></td></tr>
+      <tr><td><code>web_teleop</code></td><td>网页遥控（:9873）+ 手动/自动开关（<code>passthrough</code>）</td></tr>
+      <tr><td><code>pwm_driver</code></td><td>速度 → 50 Hz RC PWM（27/28 脚），中位 1.5 ms，看门狗 0.5 s</td></tr>
+    </tbody>
+  </table>
+</section>
+
+<section>
+  <h2><span class="num">8</span>配置改动与待办</h2>
+  <table>
+    <thead><tr><th style="width:230px">文件</th><th>改动</th></tr></thead>
+    <tbody>
+      <tr><td><code>trajectory_playback.yaml</code></td><td>轨迹 → <code>route_20261119.csv</code>；串口改 by-id；<code>min_speed</code> 0 → 0.15</td></tr>
+      <tr><td><code>web_pwm_teleop.yaml</code></td><td><code>max_linear_speed</code> 1.0 → 0.5；<code>command_timeout</code> 0.3 → 0.5</td></tr>
+      <tr><td><code>web_teleop/static/index.html</code></td><td>前端请求超时 400 → 250 ms</td></tr>
+    </tbody>
+  </table>
+  <div class="note w">
+    <strong>待办：</strong>① USB 重枚举未根治（怀疑供电/线材）；② 重启后需手动使能 NTRIP；③ 转弯段贴线可再调（速度系数/前瞻/差速标定）；④ 回放提前 3 m 停车待查；⑤ <code>parcels/default.json</code> 参考点仍在 1 公里外，覆盖规划暂不可用。
+  </div>
+</section>
+
+<div class="tools"><button onclick="window.print()">打印 / 存为 PDF</button></div>
+
+<footer>
+  数据与原始记录：<code>docs/工作记录/2026-11-19/</code> · 轨迹 <code>data/run_auto_20261119.csv</code> · 生成于 2026-11-19
+</footer>
+</div>
+</body>
+</html>
