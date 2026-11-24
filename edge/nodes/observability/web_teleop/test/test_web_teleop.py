@@ -437,6 +437,8 @@ class TestHeartbeatTimeout:
 
     def test_frontend_has_heartbeat_and_stop_hooks(self):
         html = (node_dir / 'static' / 'index.html').read_text(encoding='utf-8')
-        for needle in ('HEARTBEAT_MS', "'touchcancel'", "'visibilitychange'",
+        # 前端常量由 HEARTBEAT_MS 换成 CONTROL_RESEND_MS（非零指令 50ms 重发），
+        # 语义不变：按住时持续续命，松手/失焦一律归零。
+        for needle in ('CONTROL_RESEND_MS', "'touchcancel'", "'visibilitychange'",
                        "'blur'", "'pagehide'", 'identifier'):
             assert needle in html, needle

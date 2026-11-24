@@ -33,7 +33,7 @@ def test_clean_shutdown_accepts_graceful_exit(monkeypatch, tmp_path):
         "node_processes_checked": 2,
         "node_processes_exited": True,
         "simulator_pid_exited": True,
-        "released_ports": [5555, 8080],
+        "released_ports": [5655, 8080],
         "pid_file_removed": True,
         "no_residual_control_process": True,
     }
