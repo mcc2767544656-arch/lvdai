@@ -1,0 +1,38 @@
+package: vision_avoid
+name: vision_avoid
+version: 1.0.0
+description: "视觉避障速度源：轮询本地视觉服务，输出 v/ω"
+
+author: "NodeFlow Team"
+license: MIT
+
+entrypoints:
+  linux:
+    kind: python
+    cmd: ["python3", "run.py"]
+  windows:
+    kind: python
+    cmd: ["python", "run.py"]
+
+ports:
+  outputs:
+    - name: velocity_cmd
+      type: control.velocity
+      description: "视觉避障速度命令 (linear_velocity, angular_velocity)"
+
+params:
+  service_url:
+    type: str
+    default: "http://127.0.0.1:8092/state"
+    description: "视觉服务状态地址"
+
+  stale_timeout:
+    type: float
+    default: 0.4
+    description: "数据过期阈值(秒)，超过则发布 0"
+
+dependencies: []
+tags:
+  - vision
+  - avoid
+  - control

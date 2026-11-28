@@ -176,6 +176,8 @@ class WebTeleopNode:
         self.require_stop_on_disconnect = sdk.get_param('require_stop_on_disconnect', False)
         self.command_timeout = float(sdk.get_param('command_timeout', 1.0))
         self.passthrough_mode = sdk.get_param('passthrough_mode', False)
+        # 自动指令超时：透传模式下 auto_velocity 时间戳超过该值即归零（0=关闭，保持旧行为）
+        self.auto_timeout = float(sdk.get_param('auto_timeout', 0.0))
 
         # ========== 创建端口 ==========
         self.velocity_cmd_port = sdk.create_output_port('velocity_cmd')
@@ -304,11 +306,20 @@ class WebTeleopNode:
                 # 透传模式：转发自动控制的速度命令
                 if self.passthrough_enabled and self.auto_velocity_port:
                     auto_cmd = self.auto_velocity_port.recv_latest()
+                    if auto_cmd and self.auto_timeout > 0:
+                        age = current_time - float(auto_cmd.get("timestamp", 0.0))
+                        if age > self.auto_timeout:
+                            auto_cmd = None
                     if auto_cmd:
                         self.current_linear = auto_cmd.get("linear_velocity", 0.0)
                         # track_controller 正角速度 = 左转(CCW)；手动摇杆正 = 右转。
                         # pwm_driver 的 invert_angular 已适配手动，自动这里取反抵消。
                         self.current_angular = -auto_cmd.get("angular_velocity", 0.0)
+                        self._send_velocity_command()
+                    elif self.current_linear != 0 or self.current_angular != 0:
+                        self.current_linear = 0.0
+                        self.current_angular = 0.0
+                        self.sdk.logger.warning("Auto command timeout, stopping")
                         self._send_velocity_command()
                 else:
                     # 手动模式

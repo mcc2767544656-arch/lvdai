@@ -1,0 +1,97 @@
+# NodeFlow 视觉避障（B 方案）
+#
+# 数据流：
+#   [vision_service.py] --HTTP /state--> [vision_avoid] --velocity_cmd--> [web_teleop.auto_velocity]
+#                                                                              |
+#                                                        [web_teleop] --velocity_cmd--> [pwm_driver]
+#
+# 手动/自动：
+#   web_teleop 网页 http://<pi>:9873 上的“自动/手动”开关切换透传；
+#   手动时 vision 命令被忽略，网页摇杆直接控制。
+#
+# 安全：
+#   - vision_avoid 数据过期 -> 发 0
+#   - web_teleop auto_timeout=0.5 -> 透传指令过期 -> 归零
+#   - pwm_driver command_timeout=0.5 -> 0.5s 无指令 -> 中位
+#
+# 首次测试务必 dry_run_mode: true（只打印不写 PWM），确认 v/ω 方向正确后再改 false。
+
+graph_id: vision_avoid
+graph_version: 1.0
+node_hub_path: ./edge/nodes
+
+nodes:
+  - id: web_teleop
+    package: observability/web_teleop
+    description: "Web遥控 + 手动/自动切换"
+    params:
+      http_host: 0.0.0.0
+      http_port: 9873
+      max_linear_speed: 0.3
+      max_angular_speed: 1.0
+      continuous_output: true
+      output_rate: 20.0
+      command_timeout: 0.5
+      passthrough_mode: true       # 默认自动（视觉）模式
+      auto_timeout: 0.5            # 自动指令 0.5s 过期归零
+
+  - id: vision_avoid
+    package: perception/vision_avoid
+    description: "视觉避障速度源"
+    params:
+      service_url: "http://127.0.0.1:8092/state"
+      stale_timeout: 0.4
+
+  - id: pwm_driver
+    package: io/pwm_driver
+    description: "PWM电机驱动"
+    params:
+      pwm_frequency: 50.0
+      left_pwmchip: pwmchip0
+      left_pwm_channel: 0
+      right_pwmchip: pwmchip1
+      right_pwm_channel: 0
+
+      pwm_min_ns: 1000000
+      pwm_center_ns: 1500000
+      pwm_max_ns: 2000000
+      pwm_duty_scale: 1.0
+      pwm_inverted_polarity: true
+
+      wheel_base: 0.5
+      max_linear_speed: 1.0
+      max_angular_speed: 4.0
+
+      drive_mode: direct
+      invert_linear: true
+      invert_angular: true
+
+      enable_safety_check: true
+      emergency_stop: false
+      command_timeout: 0.5
+
+      enable_verbose_log: false
+      dry_run_mode: true           # 首次测试：只打印，不写 PWM
+
+safety_resources:
+  drive_pwm:
+    owner: pwm_driver
+    handler: linux_sysfs_pwm_pair
+    dry_run: true
+    params_from_owner:
+      frequency_hz: pwm_frequency
+      neutral_high_pulse_ns: pwm_center_ns
+      left_chip: left_pwmchip
+      left_channel: left_pwm_channel
+      right_chip: right_pwmchip
+      right_channel: right_pwm_channel
+      inverted_mapping: pwm_inverted_polarity
+      dry_run: dry_run_mode
+
+edges:
+  - from: vision_avoid.velocity_cmd
+    to: web_teleop.auto_velocity
+    description: "视觉速度 -> 自动通道"
+  - from: web_teleop.velocity_cmd
+    to: pwm_driver.velocity_cmd
+    description: "仲裁后的速度 -> PWM"

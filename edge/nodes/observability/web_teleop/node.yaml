@@ -82,6 +82,11 @@ params:
     default: false
     description: "透传模式：直接转发自动控制的速度命令，Web遥控器禁用"
 
+  auto_timeout:
+    type: float
+    default: 0.0
+    description: "透传自动指令超时(秒)：auto_velocity 时间戳超过该值即归零；0=关闭"
+
 # 依赖库
 dependencies: []
 
